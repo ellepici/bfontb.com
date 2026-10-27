@@ -1,0 +1,58 @@
+@* Percorso: cartella › Catalogo › famiglia › variante › stile *@
+@if (Lib.IsSidePage)
+{
+    @* nelle impostazioni, nei crediti e nelle segnalazioni non serve sapere dove si è: serve tornare dove si era *@
+    <nav class="crumbs" aria-label="Back">
+        <button class="back" @onclick="Lib.CloseSettings"><Icon Name="arrow-left" /> @BackLabel</button>
+        <span class="crumb-note">or press Esc</span>
+    </nav>
+}
+else
+{
+<nav class="crumbs" aria-label="You are here">
+    @if (Lib.View is View.Family or View.Style)
+    {
+        @* nella pagina di una famiglia o di uno stile: si torna all'elenco con un clic (o con Esc) *@
+        <button class="back" title="Back to the catalog (Esc)" @onclick="Lib.ShowCatalog"><Icon Name="arrow-left" /> Back to the catalog</button>
+    }
+    <ol>
+        @for (int i = 0; i < Crumbs.Count; i++)
+        {
+            var c = Crumbs[i];
+            bool last = i == Crumbs.Count - 1;
+            <li>
+                @if (c.Go is not null && !last)
+                {
+                    <button class="crumb" @onclick="c.Go">@c.Text</button>
+                }
+                else
+                {
+                    <span class="@(last ? "crumb here" : "crumb")" aria-current="@(last ? "page" : null)">@c.Text</span>
+                }
+                @if (c.Counts)
+                {
+                    <span class="crumb-note">
+                        <FlowNumber Value="CountFamilies" /> @Fmt.Plural(CountFamilies, "family", "families") ·
+                        <FlowNumber Value="CountStyles" /> @Fmt.Plural(CountStyles, "style", "styles")@(c.Note is null ? "" : " · " + c.Note)
+                    </span>
+                }
+                else if (c.Note is not null)
+                {
+                    <span class="crumb-note">@c.Note</span>
+                }
+            </li>
+        }
+    </ol>
+    @if (Lib.View is View.Catalog or View.Family && !Lib.IsDemo)
+    {
+        <div class="layout-switch" role="group" aria-label="Layout">
+            <button aria-pressed="@(Lib.GridView ? "true" : "false")" title="Grid" aria-label="Grid" @onclick="() => Lib.SetGridViewAsync(true)">
+                <Icon Name="squares-four" />
+            </button>
+            <button aria-pressed="@(Lib.GridView ? "false" : "true")" title="List" aria-label="List" @onclick="() => Lib.SetGridViewAsync(false)">
+                <Icon Name="square-split-vertical" />
+            </button>
+        </div>
+    }
+</nav>
+}

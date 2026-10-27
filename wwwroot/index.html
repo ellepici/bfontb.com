@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>B(fore) Font B(ook)</title>
+    <meta name="description" content="Proof the fonts in a folder in your browser, without installing them." />
+    <base href="/" />
+    <link rel="preload" id="webassembly" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+
+    <!-- Carattere dell'interfaccia: Inter di Rasmus Andersson (https://rsms.me/inter/) -->
+    <link rel="preconnect" href="https://rsms.me/" />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+
+    <!-- I sei caratteri di esempio mostrati prima di aprire una cartella (Google Fonts) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,400&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;800&display=swap" />
+
+    <script>
+        // Un solo file per due cose: all'indirizzo "/" la presentazione (HTML semplice, la legge anche Google),
+        // da "/app" in poi l'app. Lo si decide qui, prima che la pagina compaia; l'app parte solo nel secondo caso.
+        var isApp = location.pathname === '/app' || location.pathname.indexOf('/app/') === 0;
+        if (isApp) document.documentElement.classList.add('is-app');
+        // aspetto scelto (chiaro o scuro), applicato prima che la pagina compaia
+        try { var t = JSON.parse(localStorage.getItem('pf.theme')); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) { }
+    </script>
+    <link rel="stylesheet" href="css/tokens.css" />
+    <link rel="stylesheet" href="css/layout.css" />
+    <link rel="stylesheet" href="css/specimens.css" />
+    <link rel="stylesheet" href="css/style-page.css" />
+    <link rel="stylesheet" href="css/prep.css" />
+    <link rel="stylesheet" href="css/landing.css" />
+    <script type="importmap"></script>
+</head>
+
+<body>
+    <!-- Presentazione (per ora vuota): solo il nome e la porta d'ingresso all'app -->
+    <main class="landing">
+        <h1 class="landing-logo" aria-label="B(efore) Font B(ook)">
+            <span>b<span class="dim">efore</span></span>
+            <span>font</span>
+            <span>b<span class="dim">ook</span></span>
+        </h1>
+        <a class="landing-open" href="/app">Open the app</a>
+    </main>
+
+    <div id="app">
+        <p class="boot">Opening B(fore) Font B(ook)…</p>
+    </div>
+
+    <div id="blazor-error-ui">
+        Something went wrong. <a href="" class="reload" onclick="location.reload(); return false">Reload the page</a>
+        <span class="dismiss" aria-label="Dismiss"><svg class="ph" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></span>
+    </div>
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js" autostart="false"></script>
+    <script>if (isApp) Blazor.start();</script>
+</body>
+
+</html>

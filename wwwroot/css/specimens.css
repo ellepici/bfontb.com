@@ -1,0 +1,117 @@
+/* Righe di prova, pagina famiglia, crediti */
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 14px; padding: 14px 4px 16px; border-bottom: 1px solid var(--rule); align-items: start; }
+.row .meta { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11.5px; color: var(--muted); }
+.row .meta b { font-family: var(--f-ui); font-weight: 600; font-size: 13px; color: var(--ink); }
+.row .meta .lnk { border: 0; background: none; padding: 0; color: var(--proof); cursor: pointer; font: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.row .acts { display: flex; gap: 6px; grid-row: 1; grid-column: 2; }
+.row .spec { grid-column: 1 / -1; line-height: 1.15; overflow-wrap: anywhere; min-height: 1.15em; cursor: pointer; }
+.row .spec.loading { color: var(--muted); }
+.row .spec.offline { color: var(--muted); opacity: .55; cursor: default; }
+.row .spec.err { font-family: var(--f-data) !important; font-size: 12px !important; color: var(--star); }
+
+/* Catalogo: righe tutte alte uguali, intestazione su una riga e al massimo due righe di testo */
+.catalog-list .row { height: var(--row-h); box-sizing: border-box; grid-template-rows: 28px minmax(0, 1fr); }
+/* l'intestazione non va a capo: si tagliano crediti e file (meta-rest), non il nome e la tendina, il cui elenco deve poter uscire */
+.row .meta .meta-rest { display: contents; }
+.catalog-list .row .meta { flex-wrap: nowrap; white-space: nowrap; min-width: 0; align-self: center; }
+.catalog-list .row .meta > * { flex-shrink: 0; }
+.catalog-list .row .meta > .meta-rest { display: flex; gap: 10px; align-items: baseline; flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.catalog-list .row .meta > .meta-rest > * { flex-shrink: 0; }
+.catalog-list .row .meta .cred { flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* al massimo due righe. Il disegno (le code di g, j, y nei corsivi, gli svolazzi) esce dalle righe: lo tagliamo solo
+   quando il testo va davvero oltre la seconda riga (classe "clamped", la mette bfontb.js), se no le righe in più si vedrebbero */
+/* le righe sono tutte alte uguali (servono due righe di testo): un testo che sta su una riga sola va al centro dello spazio */
+.catalog-list .row .spec { align-self: center; line-height: var(--spec-lh); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: visible; overflow-wrap: break-word; }
+.catalog-list .row .spec.clamped { overflow: hidden; }
+
+.icon-btn { border: 1px solid var(--rule); background: transparent; color: var(--muted); width: 28px; height: 28px; border-radius: 2px; cursor: pointer; display: grid; place-items: center; font-size: 16px; line-height: 1; }
+.icon-btn:hover { color: var(--ink); border-color: var(--muted); }
+.icon-btn[aria-pressed=true] { color: var(--star); border-color: var(--star); }
+
+.cred { font-family: var(--f-ui); font-size: 12px; color: var(--ink); opacity: .8; }
+
+.fam-head { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.fam-head h2 { font-family: var(--f-display); font-size: 40px; letter-spacing: -.02em; margin: 0; line-height: 1; text-wrap: balance; }
+/* nome della famiglia e, sulla stessa linea di base, quanti stili e varianti */
+.fam-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 14px; }
+.fam-head .sub { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 14px; color: var(--muted); }
+.traits { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.tag { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--proof-soft); color: var(--proof); }
+.fam-hint { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+.filter-note { font-size: 13px; color: var(--muted); margin: 14px 0 0; display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.var-nav { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 6px; }
+.var-h { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--proof); margin: 26px 0 0; padding-bottom: 6px; border-bottom: 1px solid var(--ink); scroll-margin-top: 12px; }
+
+.card { border: 1px solid var(--rule); background: var(--sheet); padding: 14px 16px; margin: 12px 0 4px; max-width: 900px; }
+.card .sec-l { margin-top: 0; }
+.sec-l { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 22px 0 6px; }
+
+.kv { display: grid; grid-template-columns: minmax(90px, max-content) minmax(0, 1fr); gap: 6px 16px; margin: 0; font-size: 13px; line-height: 1.45; }
+.kv dt { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11.5px; color: var(--muted); padding-top: 1px; }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+.kv dd.long { max-height: 7.2em; overflow: auto; font-size: 12px; color: var(--muted); }
+.kv a, .links a { color: var(--proof); text-underline-offset: 2px; }
+.links { display: flex; gap: 6px 14px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; }
+.links span { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11.5px; color: var(--muted); }
+.src-note { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11px; color: var(--muted); margin-top: 10px; }
+
+@media (max-width: 760px) {
+  .fam-head h2 { font-size: 30px; }
+}
+
+/* Catalogo a griglia: schede «Aa» come in Libro Font, righe tutte alte uguali */
+.catalog-grid .grid-row { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); column-gap: var(--gap); height: var(--grow-h); box-sizing: border-box; padding-bottom: 14px; }
+/* Pagina della famiglia a griglia: una scheda per stile, quante ne stanno in una riga */
+.fam-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--card-w), 100%), 1fr)); gap: 18px var(--gap); padding: 16px 0 22px; }
+.fcard { display: flex; flex-direction: column; align-items: stretch; gap: 8px; min-width: 0; border: 0; background: none; padding: 0; color: inherit; cursor: pointer; text-align: center; }
+.fcard .tile {
+  height: var(--tile-h); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .05); transition: border-color .12s, box-shadow .12s;
+}
+.fcard:hover .tile { border-color: var(--muted); box-shadow: 0 4px 14px rgba(0, 0, 0, .08); }
+.fcard:focus-visible { outline: none; }
+.fcard:focus-visible .tile { outline: 2px solid var(--proof); outline-offset: -2px; }
+/* «Aa» non si ritaglia da solo: svolazzi e corsivi escono dalla riga e dalla larghezza della lettera; taglia solo il bordo della scheda */
+.fcard .aa { line-height: 1.15; white-space: nowrap; overflow: visible; font-feature-settings: normal; letter-spacing: normal; }
+.fcard .aa.loading, .fcard .aa.offline { color: var(--muted); opacity: .45; }
+.fcard .aa.err { color: var(--star); font-family: var(--f-ui); }
+.fcard .n { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* maniglie dello stile, ai lati del suo nome (nel catalogo) */
+.fcard .fc-bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; padding: 0 10px; box-sizing: border-box; }
+.fcard .fc-bar .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fcard .fc-step { flex: none; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 2px; background: none; color: var(--muted); cursor: pointer; transition: color .12s, background-color .12s; }
+.fcard .fc-step .ph { width: 14px; height: 14px; }
+/* in blu correttore solo sotto il puntatore */
+.fcard .fc-step:hover { color: var(--proof); background: var(--proof-soft); }
+.fcard .name { font-size: 13px; line-height: 1.3; font-weight: 500; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; padding-inline: 2px; }
+
+/* Prima apertura o cartella senza font: tutta l'area dei font è una zona in cui trascinare la cartella */
+main > .view:has(> .catalog.start) { padding-block: 0; overflow: hidden; }   /* la zona arriva fino in fondo, senza scorrere */
+.catalog.start { height: 100%; box-sizing: border-box; padding: 16px 0 20px; }
+.dropzone {
+  height: 100%; min-height: 380px; box-sizing: border-box; display: grid; place-items: center; padding: 32px;
+  background: var(--sheet); border: 2px dashed var(--rule); border-radius: 14px; transition: border-color .15s, background .15s;
+}
+html.drag .dropzone { border-color: var(--proof); background: var(--proof-soft); }   /* mentre si trascina una cartella sulla pagina */
+.dz-inner { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 460px; gap: 10px; }
+.dz-icon { width: 64px; height: 64px; color: var(--proof); margin-bottom: 6px; }
+.dz-inner h2 { font-family: var(--f-display); font-size: 26px; letter-spacing: -.02em; margin: 0; }
+.dz-sub { margin: 0; color: var(--muted); font-size: 15px; }
+.dz-or { display: flex; align-items: center; gap: 12px; width: 220px; margin: 10px 0; color: var(--muted); font-family: var(--f-data); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+.dz-or::before, .dz-or::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+.dz-btn { padding: 10px 18px; font-size: 15px; }
+.dz-note { margin: 14px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.dz-status { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 4px; padding: 4px 10px; border-radius: 999px; font-size: 13px; color: var(--star); border: 1px solid currentColor; }
+.aside-empty { margin: 4px 6px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+
+/* Colori scelti per i testi di prova (Colors in alto): righe del catalogo e della famiglia, schede, prova */
+.app.tinted .row .spec { color: var(--spec-ink, var(--ink)); background: var(--spec-paper, var(--sheet)); padding-inline: 12px; border-radius: 2px; }
+/* in caricamento o con la cartella da ricollegare il testo si schiarisce, ma lo sfondo resta pieno (niente opacità sull'insieme) */
+.app.tinted .row .spec.loading, .app.tinted .row .spec.offline,
+.app.tinted .fcard .aa.loading, .app.tinted .fcard .aa.offline {
+  opacity: 1; color: color-mix(in srgb, var(--spec-ink, var(--ink)) 55%, var(--spec-paper, var(--sheet)));
+}
+.app.tinted .fcard .tile { background: var(--spec-paper, var(--sheet)); }
+.app.tinted .fcard .aa { color: var(--spec-ink, var(--ink)); }
+.app.tinted .fcard .tile .n, .app.tinted .fcard .fc-step { color: color-mix(in srgb, var(--spec-ink, var(--ink)) 60%, transparent); }

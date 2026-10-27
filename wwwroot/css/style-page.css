@@ -1,0 +1,104 @@
+/* Pagina di uno stile: intestazione, scelta di variante e stile, schede, tutti i caratteri */
+.sv { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.sv-head { flex: none; display: flex; gap: 10px 20px; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; margin-bottom: 12px; }
+.sv-title { min-width: 0; flex: 1; }
+.sv-title h2 { font-family: var(--f-display); font-size: 30px; letter-spacing: -.02em; margin: 0; line-height: 1.05; text-wrap: balance; }
+.sv-title h2 span { color: var(--muted); font-weight: 400; }
+.sv-title .sub { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11.5px; color: var(--muted); margin-top: 5px; overflow-wrap: anywhere; }
+.sv-acts { display: flex; gap: 8px; align-items: center; margin-left: auto; flex: none; }
+
+.sv-bar { flex: none; display: flex; gap: 10px 14px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 14px; }
+.pick { display: flex; flex-direction: column; gap: 4px; font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.pick em { font-style: normal; opacity: .75; margin-left: 4px; }
+.sv-tabs { display: inline-flex; gap: 2px; border: 1px solid var(--rule); border-radius: 2px; padding: 2px; margin-left: auto; }
+.sv-tabs .n { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11px; opacity: .7; margin-left: 4px; }
+
+.sv-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.sv-body.fill { overflow: hidden; }
+
+/* Esploratore: carattere grande a sinistra (alto quanto lo spazio libero), griglia che scorre a destra */
+.gx-host { height: 100%; transition: opacity .2s; }
+.gx-host.waiting { opacity: .45; pointer-events: none; }   /* lo stile precedente, mentre si leggono i caratteri del nuovo */
+.gx { height: 100%; display: grid; grid-template-columns: minmax(280px, 5fr) minmax(0, 7fr); grid-template-rows: minmax(0, 1fr); gap: 24px; outline: none; }
+.gx-big { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--rule); background: var(--sheet); border-radius: 2px; overflow: hidden; }
+.gx-stage { position: relative; flex: 1; min-height: 0; container-type: size; }
+.gx-svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; }   /* le linee escono dal riquadro e arrivano ai bordi */
+/* lo stesso quadrato in cui l'SVG disegna il suo riquadro 1000 × 1000 (centrato, lato = il lato corto); --u = una unità */
+.gx-sq { position: absolute; left: calc(50% - min(100cqw, 100cqh) / 2); top: calc(50% - min(100cqw, 100cqh) / 2); width: min(100cqw, 100cqh); aspect-ratio: 1; --u: calc(min(100cqw, 100cqh) / 1000); pointer-events: none; }
+.gx-line { stroke: var(--rule); stroke-width: 2; }
+.gx-line.strong { stroke: var(--muted); }
+.gx-lab { font-family: var(--f-ui); font-size: 26px; fill: var(--muted); }
+/* il margine interno (1em) allarga la zona in cui Safari disegna: le forme alternative (ornamenti, svolazzi) sono più grandi
+   del carattere di partenza e senza questo spazio venivano tagliate. Il JavaScript ne tiene conto quando centra. */
+.gx-char { position: absolute; padding: 1em; white-space: pre; line-height: normal; color: var(--ink); font-kerning: normal; visibility: hidden; }
+.gx-char.placed { visibility: visible; }   /* il JavaScript lo mette sulla linea di base e al centro del disegno, poi lo mostra */
+.gx-bl { display: inline-block; width: 0; height: 0; vertical-align: baseline; }
+.gx-info { flex: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--rule); background: var(--paper); }
+.gx-what { text-align: center; font-size: 13px; line-height: 1.4; min-width: 0; }
+.gx-what b { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-weight: 500; }
+.gx-what span { color: var(--muted); }
+.gx-grp { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gx-nav { border: 1px solid var(--rule); background: var(--sheet); color: var(--ink); width: 36px; height: 32px; border-radius: 2px; cursor: pointer; font-size: 16px; display: grid; place-items: center; }
+.gx-nav:hover { border-color: var(--ink); }
+
+.gx-list { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 8px; }
+.gx-sum { margin: 0 0 14px; font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.gx-part { font-family: var(--f-display); font-size: 20px; margin: 30px 0 4px; padding-top: 14px; border-top: 1px solid var(--ink); }
+
+.gg { margin-bottom: 22px; }
+.gg h4 { font-size: 13px; font-weight: 600; margin: 0 0 8px; display: flex; gap: 8px; align-items: baseline; }
+.gg h4 span { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11px; font-weight: 400; color: var(--muted); }
+.gg-cells { display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
+.gc { aspect-ratio: 1; border: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); background: var(--sheet); color: var(--ink); font-size: 21px; line-height: 1; padding: 0; cursor: pointer; display: grid; place-items: center; overflow: hidden; white-space: nowrap; font-kerning: none; }
+.gc:hover { background: var(--proof-soft); }
+.gc.on { background: var(--proof); color: var(--paper); }
+.gg-more { margin-top: 8px; }
+.gc .mk { display: inline-block; white-space: pre; }
+
+/* Prova ai vari corpi */
+.wf { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 12px; align-items: baseline; padding-block: 6px; border-bottom: 1px solid var(--rule); }
+.wf span { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.wf div { white-space: nowrap; overflow: hidden; }
+.para { margin-top: 18px; font-size: 17px; line-height: 1.55; max-width: 65ch; }
+
+@media (max-width: 1000px) {
+  .sv-body.fill { overflow-y: auto; }
+  .gx { height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; }
+  .gx-stage { flex: none; height: 46vh; }
+  .gx-list { overflow: visible; }
+  .sv-tabs { margin-left: 0; }
+}
+@media (max-width: 760px) {
+  .sv-title h2 { font-size: 26px; }
+  .sv-body, .sv-body.fill { overflow: visible; }
+  .pick .dd, .pick .dd-btn { min-width: 0; width: 100%; }
+}
+
+/* Crediti: pulsante accanto al nome, pannello sopra la pagina dello stile */
+.sv-head { position: relative; }
+.sv-name { display: flex; gap: 14px; align-items: center; }
+.sv-name h2 { min-width: 0; }
+.sv-acts .cred-btn { height: 28px; }
+.cred-btn[aria-expanded=true] { background: var(--proof-soft); border-color: var(--proof); color: var(--proof); }
+.cred-back { position: fixed; inset: 0; z-index: 19; }
+.cred-pop {
+  position: absolute; z-index: 20; top: calc(100% + 8px); right: 0;
+  width: min(720px, 100%); max-height: max(240px, calc(100dvh - 330px)); overflow-y: auto; overscroll-behavior: contain;
+  background: var(--sheet); border: 1px solid var(--ink); border-radius: 2px; padding: 14px 16px 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .18);
+}
+.cred-pop-h { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
+.cred-pop-h b { color: var(--ink); font-family: var(--f-data); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 12px; overflow-wrap: anywhere; }
+
+/* Colori scelti per i testi di prova (Colors in alto): il carattere grande, la griglia e la prova */
+.app.tinted .gx-big { background: var(--spec-paper, var(--sheet)); }
+.app.tinted .gx-char { color: var(--spec-ink, var(--ink)); }
+.app.tinted .gx-line { stroke: color-mix(in srgb, var(--spec-ink, var(--ink)) 20%, transparent); }
+.app.tinted .gx-line.strong { stroke: color-mix(in srgb, var(--spec-ink, var(--ink)) 45%, transparent); }
+.app.tinted .gx-lab { fill: color-mix(in srgb, var(--spec-ink, var(--ink)) 60%, transparent); }
+.app.tinted .gc { background: var(--spec-paper, var(--sheet)); color: var(--spec-ink, var(--ink)); border-color: color-mix(in srgb, var(--spec-ink, var(--ink)) 16%, var(--spec-paper, var(--sheet))); }
+.app.tinted .gc:hover { background: color-mix(in srgb, var(--spec-ink, var(--ink)) 12%, var(--spec-paper, var(--sheet))); }
+.app.tinted .gc.on { background: var(--proof); color: #fff; }
+.app.tinted .spec-sheet { background: var(--spec-paper, var(--sheet)); color: var(--spec-ink, var(--ink)); padding: 4px 16px 16px; border-radius: 2px; }
+.app.tinted .spec-sheet .wf { border-bottom-color: color-mix(in srgb, var(--spec-ink, var(--ink)) 16%, transparent); }
+.app.tinted .spec-sheet .wf span, .app.tinted .spec-sheet .sec-l { color: color-mix(in srgb, var(--spec-ink, var(--ink)) 60%, transparent); }

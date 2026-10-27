@@ -1,0 +1,63 @@
+@* Segnalare un problema o proporre un'idea: si compila qui e arriva per email (Web3Forms, vedi FeedbackView.razor.cs) *@
+<div class="settings feedback">
+    <h2>@(IsBug ? "Report a bug" : "Suggest a feature")</h2>
+    <p class="set-note fb-intro">
+        @(IsBug
+            ? "Something doesn’t work as it should? Tell what happened: every report helps make the app better."
+            : "An idea that would make the app more useful for you? Describe it: every suggestion is read.")
+    </p>
+
+    <div class="seg seg-text" role="group" aria-label="Kind of message">
+        <button aria-pressed="@(IsBug ? "true" : "false")" @onclick="() => Lib.OpenFeedback(FeedbackKind.Bug)"><Icon Name="bug" /> Bug</button>
+        <button aria-pressed="@(IsBug ? "false" : "true")" @onclick="() => Lib.OpenFeedback(FeedbackKind.Feature)"><Icon Name="lightbulb" /> Idea</button>
+    </div>
+
+    @if (sent)
+    {
+        <div class="card fb-done" role="status">
+            <Icon Name="check-circle" />
+            <div>
+                <b>Thank you, your message has been sent.</b>
+                <p>@(email.Trim().Length > 0 ? "If needed, the answer will arrive at " + email.Trim() + "." : "It arrives by email and will be read soon.")</p>
+                <button class="btn ghost" @onclick="Reset">Write another one</button>
+            </div>
+        </div>
+    }
+    else
+    {
+        <form class="fb-form" @onsubmit="SendAsync" @onsubmit:preventDefault="true">
+            <label>
+                <span>Title</span>
+                <input type="text" required maxlength="120" placeholder="@(IsBug ? "E.g. the grid view doesn’t load some fonts" : "E.g. compare two styles side by side")" @bind="title" @bind:event="oninput" />
+            </label>
+            <label>
+                <span>@(IsBug ? "What happened?" : "What would you like to be able to do?")</span>
+                <textarea required rows="6" placeholder="@(IsBug ? "What you did, what you saw, what you expected instead." : "Describe the idea and how it would help you.")" @bind="message" @bind:event="oninput"></textarea>
+            </label>
+            @if (IsBug)
+            {
+                <label>
+                    <span>Steps to see it again <em>optional</em></span>
+                    <textarea rows="3" placeholder="@StepsHint" @bind="steps" @bind:event="oninput"></textarea>
+                </label>
+            }
+            <label>
+                <span>Your email <em>optional, only if you’d like an answer</em></span>
+                <input type="email" autocomplete="email" placeholder="name@example.com" @bind="email" @bind:event="oninput" />
+            </label>
+            <label class="fb-check">
+                <input type="checkbox" @bind="includeInfo" />
+                <span>Add technical details: <em>@InfoPreview</em></span>
+            </label>
+            @* contro i programmi che compilano i moduli da soli: una casella che una persona non vede *@
+            <input type="checkbox" class="fb-hp" tabindex="-1" aria-hidden="true" autocomplete="off" @bind="botcheck" />
+            <div class="fb-acts">
+                <button class="btn" type="submit" disabled="@sending"><Icon Name="@(sending ? "circle-half" : "arrow-right")" /> @(sending ? "Sending…" : "Send")</button>
+                @if (error is not null)
+                {
+                    <span class="fb-error" role="alert"><Icon Name="warning-circle" /> @error</span>
+                }
+            </div>
+        </form>
+    }
+</div>

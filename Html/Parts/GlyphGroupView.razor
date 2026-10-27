@@ -1,0 +1,29 @@
+@* Un blocco di caratteri (Latino di base…) o una funzione OpenType (Legature…) *@
+<section class="gg">
+    <h4>@Group.Title <span>@Fmt.N(Group.Items.Count)@(Group.Note is null ? "" : " · " + Group.Note)</span></h4>
+    <div class="gg-cells" @ref="cellsEl">
+        @foreach (var it in Shown)
+        {
+            <button class="@(it.Id == SelectedId ? "gc on" : "gc")" style="@CellStyle(it)" title="@Title(it)" @onclick="() => OnPick.InvokeAsync(it)">
+                @if (FeatureShift(it) is { } shift)
+                {
+                    @* accento di una forma alternativa: spostato di quanto il suo disegno (letto dal file) è lontano dal centro *@
+                    <span class="mk" style="transform:translateX(@shift)">@it.Text</span>
+                }
+                else if (IsMark(it))
+                {
+                    @* segno combinante: centrato sul suo disegno dal JavaScript (vedi centerMarks) *@
+                    <span class="mk">@it.Text</span>
+                }
+                else
+                {
+                    @it.Text
+                }
+            </button>
+        }
+    </div>
+    @if (!expanded && Group.Items.Count > Limit)
+    {
+        <button class="btn ghost sm gg-more" @onclick="Expand">Show all @Fmt.N(Group.Items.Count) characters</button>
+    }
+</section>

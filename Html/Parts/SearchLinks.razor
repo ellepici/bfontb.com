@@ -1,0 +1,8 @@
+@* Collegamenti per cercare la famiglia online *@
+<div class="links">
+    <span>Search online</span>
+    @foreach (var (label, url) in Links)
+    {
+        <a href="@url" target="_blank" rel="noopener">@label</a>
+    }
+</div>

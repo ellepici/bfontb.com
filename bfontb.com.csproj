@@ -1,10 +1,27 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
-    <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
-    </PropertyGroup>
+  <!--
+    Banco di prova font (bfontb.com)
+    Blazor WebAssembly: tutto il C# gira nel browser, quindi i font dell'utente
+    vengono letti in locale e non vengono mai caricati su un server.
+
+    Struttura per linguaggio:
+      CSharp/   logica dell'app (modelli, servizi, code-behind dei componenti)
+      Html/     markup dei componenti (.razor, solo HTML e binding)
+      wwwroot/  file statici: index.html, css/, js/ (ponte minimo verso le API del browser)
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Bfontb</RootNamespace>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.13" PrivateAssets="all" />
+  </ItemGroup>
 
 </Project>

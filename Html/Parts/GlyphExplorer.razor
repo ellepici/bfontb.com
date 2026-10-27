@@ -1,0 +1,66 @@
+@* Carattere grande a sinistra con le linee di riferimento, tutti i caratteri del file a destra *@
+<div class="gx" tabindex="0" @ref="gxEl" @onkeydown="OnKey" aria-label="Characters of the style: use the arrow keys to step through them">
+    <div class="gx-big">
+        <div class="gx-stage" role="img" aria-label="@($"Character {Sel?.Text}, enlarged")">
+        <svg class="gx-svg" viewBox="0 0 1000 1000" aria-hidden="true">
+            @foreach (var l in Lines)
+            {
+                <g>
+                    <line x1="-6000" x2="7000" y1="@F(l.Y)" y2="@F(l.Y)" class="@(l.Strong ? "gx-line strong" : "gx-line")" />
+                    <text x="@(l.Right ? "982" : "18")" y="@F(l.Y - 12)" text-anchor="@(l.Right ? "end" : "start")" class="gx-lab">@l.Label</text>
+                </g>
+            }
+        </svg>
+        @* il carattere è in HTML e non nel disegno SVG: Safari nell'SVG non disegna un accento da solo e sposta quelli appoggiati a uno spazio *@
+        @if (Sel is not null)
+        {
+            <div class="gx-sq" aria-hidden="true"><span @ref="bigText" class="gx-char" style="@BigStyle">@Sel.Text<i class="gx-bl"></i></span></div>
+        }
+        </div>
+        <div class="gx-info">
+            <button class="gx-nav" aria-label="Previous character" @onclick="() => Step(-1)"><Icon Name="arrow-left" /></button>
+            <div class="gx-what">
+                <div><b>@SelCode</b> <span>@SelCategory</span></div>
+                <div class="gx-grp">@SelGroup</div>
+            </div>
+            <button class="gx-nav" aria-label="Next character" @onclick="() => Step(1)"><Icon Name="arrow-right" /></button>
+        </div>
+    </div>
+
+    <div class="gx-list">
+        @if (Set is null)
+        {
+            <p class="gx-sum">Sample typeface: only the basic alphabet is shown here.</p>
+        }
+        else
+        {
+            <p class="gx-sum">
+                <FlowNumber Value="Data.Encoded" /> encoded characters
+                @if (Data.Alternates > 0)
+                {
+                    <text> · </text><FlowNumber Value="Data.Alternates" /><text> alternate forms</text>
+                }
+                @if (Data.TotalGlyphs > 0)
+                {
+                    <text> · </text><FlowNumber Value="Math.Min(Data.Reachable, Data.TotalGlyphs)" /><text> of the file’s </text><FlowNumber Value="Data.TotalGlyphs" /><text> glyphs shown here</text>
+                }
+            </p>
+        }
+        @foreach (var g in Data.Blocks)
+        {
+            <GlyphGroupView Group="g" Css="@Css" SelectedId="@(Sel?.Id ?? -1)" OnPick="Pick" FontPrefix="@CanvasPrefix" FontFamily="@CanvasFamily" Ink="Data.Ink" />
+        }
+        @if (Data.Features.Count > 0)
+        {
+            <div class="gx-part">Alternate forms (OpenType features)</div>
+            @foreach (var g in Data.Features)
+            {
+                <GlyphGroupView Group="g" Css="@Css" SelectedId="@(Sel?.Id ?? -1)" OnPick="Pick" FontPrefix="@CanvasPrefix" FontFamily="@CanvasFamily" Ink="Data.Ink" />
+            }
+        }
+        @if (HiddenNote is not null)
+        {
+            <p class="gx-sum">@HiddenNote</p>
+        }
+    </div>
+</div>

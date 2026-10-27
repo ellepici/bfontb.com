@@ -1,0 +1,44 @@
+@* Impostazioni: guida per ordinare la cartella e preparazione della cartella (chiaro/scuro è in alto, nella testata) *@
+<div class="settings">
+    <h2>Settings</h2>
+
+    <section class="set-sec" aria-labelledby="set-guide">
+        <h3 class="set-h" id="set-guide">Organising your font folder</h3>
+        <p class="set-note">The catalog reads your folders: one folder per family, one subfolder per variant. A tidy folder gives a tidy catalog, and you only have to do it once.</p>
+
+        <div class="guide" id="set-steps">
+            <div class="card guide-tree">
+                <div class="guide-k">The structure to aim for</div>
+<pre>@Tree</pre>
+            </div>
+
+            <ol class="guide-steps">
+                @foreach (var (title, text) in Steps)
+                {
+                    <li><b>@title</b><span>@text</span></li>
+                }
+            </ol>
+        </div>
+
+        <div class="card ai" id="set-ai">
+            <div class="ai-h">
+                <div>
+                    <div class="guide-k">Let an AI do it</div>
+                    <p>
+                        An AI assistant that can read and move files in a folder (for example Claude with access to your font folder) can do all of this for you.
+                        Work on a copy of the folder, paste this prompt, check the plan it shows you before saying OK, then open the folder here to see the result.
+                    </p>
+                </div>
+            </div>
+            @* il pulsante sta fermo nell'angolo del riquadro; nel testo un piccolo spazio vuoto a destra gli fa posto *@
+            <div class="prompt-box">
+                <button class="btn ghost copy-btn" @onclick="CopyPrompt"><Icon Name="@(copied ? "check" : "copy")" /> @(copied ? "Copied" : "Copy prompt")</button>
+<pre class="prompt"><span class="prompt-gap" aria-hidden="true"></span>@Prompt</pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="set-sec">
+        <PrepView Version="Version" />
+    </section>
+</div>

@@ -1,0 +1,17 @@
+@* Crediti di uno stile, letti dal file *@
+<dl class="kv">
+    @foreach (var item in Items)
+    {
+        <dt>@item.Label</dt>
+        <dd class="@(item.Long ? "long" : null)">
+            @if (item.Url is not null)
+            {
+                <a href="@item.Url" target="_blank" rel="noopener">@item.Text</a>
+            }
+            else
+            {
+                @item.Text
+            }
+        </dd>
+    }
+</dl>

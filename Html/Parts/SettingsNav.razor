@@ -1,0 +1,20 @@
+@* Colonna di sinistra delle pagine di servizio: le pagine (impostazioni, crediti, segnalazioni) e, nelle impostazioni,
+   le sezioni delle impostazioni, sempre visibili: un clic porta alla sezione (aprendo prima le impostazioni, se serve),
+   e mentre si scorre si accende quella che si sta leggendo *@
+<nav class="set-nav" aria-label="Pages" @ref="navEl">
+    <ul>
+        <li class="pg">
+            <button class="@Here(View.Settings)" @onclick="() => Lib.OpenPage(View.Settings)"><Icon Name="gear" /> Settings</button>
+            <ul>
+                @foreach (var (id, title, sub) in SettingsView.Sections)
+                {
+                    if (!Shown(id)) continue;
+                    <li class="@(sub ? "sub" : "sec")"><button data-target="@id" @onclick="() => GoTo(id)">@title</button></li>
+                }
+            </ul>
+        </li>
+        <li class="pg"><button class="@Here(View.Credits)" @onclick="() => Lib.OpenPage(View.Credits)"><Icon Name="info" /> Credits</button></li>
+        <li class="pg"><button class="@HereFeedback(FeedbackKind.Bug)" @onclick="() => Lib.OpenFeedback(FeedbackKind.Bug)"><Icon Name="bug" /> Report a bug</button></li>
+        <li class="pg"><button class="@HereFeedback(FeedbackKind.Feature)" @onclick="() => Lib.OpenFeedback(FeedbackKind.Feature)"><Icon Name="lightbulb" /> Suggest a feature</button></li>
+    </ul>
+</nav>

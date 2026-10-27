@@ -1,0 +1,65 @@
+@* Una famiglia: varianti e tutti gli stili dal più leggero al più pesante *@
+@if (Current is null)
+{
+    <p class="empty">Choose a family from the list on the left.</p>
+}
+else
+{
+    <div class="fam-head">
+        <div class="fam-title">
+            <h2>@Current.Name</h2>
+            <span class="sub">@Summary</span>
+        </div>
+        @if (Traits.Count > 0)
+        {
+            <div class="traits">
+                @foreach (var t in Traits)
+                {
+                    <span class="tag">@t</span>
+                }
+            </div>
+        }
+    </div>
+
+    <p class="fam-hint">@(Lib.GridView ? "Click a card" : "Click a sample text") to open the style: all its characters and its credits.</p>
+
+    @if (HiddenVariants > 0)
+    {
+        <div class="filter-note">
+            Filter on: showing only the @FilterLabel variants. @HiddenText
+            <button class="lnk" @onclick="ShowAll">Show all variants</button>
+        </div>
+    }
+
+    @if (Variants.Count > 1)
+    {
+        <div class="var-nav">
+            @foreach (var v in Variants)
+            {
+                <a class="chip" href="@($"#{v.Anchor}")" @onclick="() => Bridge.ScrollToAsync(v.Anchor)" @onclick:preventDefault="true">@v.Name</a>
+            }
+        </div>
+    }
+
+    @foreach (var v in Variants)
+    {
+        <div class="var-h" id="@v.Anchor">@v.Name</div>
+        @if (Lib.GridView)
+        {
+            @* stesse schede della griglia del catalogo, una per stile: qui non serve lo scorrimento virtuale, la griglia va a capo da sola *@
+            <div class="fam-grid" style="@GridStyle">
+                @foreach (var st in v.Styles)
+                {
+                    <FamilyCard @key="st.Id" Family="Current" Style="st" Note="@CardNote(st)" AaSize="AaSize" OpensStyle="true" />
+                }
+            </div>
+        }
+        else
+        {
+            @foreach (var st in v.Styles)
+            {
+                <SpecimenRow @key="st.Id" Style="st" Family="@Current.Name" Title="@st.Label" Extra="@WeightNote(st)" />
+            }
+        }
+    }
+}

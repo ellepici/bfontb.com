@@ -1,0 +1,15 @@
+@* Confronto: gli stili segnati con la stella, con lo stesso testo e lo stesso corpo *@
+@if (Pinned.Count == 0)
+{
+    <p class="empty">
+        The comparison is empty. Press <Icon Name="star" Class="inline" /> next to a style, in the catalog or in a family, to put it here
+        and see it next to the others with the same text and the same size.
+    </p>
+}
+else
+{
+    @foreach (var (style, family) in Pinned)
+    {
+        <SpecimenRow @key="style.Id" Style="style" Family="@family" Title="@($"{family} — {style.Label}")" />
+    }
+}

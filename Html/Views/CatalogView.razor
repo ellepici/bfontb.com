@@ -1,0 +1,53 @@
+@* Catalogo: a elenco (una riga per famiglia) o a griglia (una scheda «Aa» per famiglia). Si crea solo ciò che si vede. *@
+<div class="@(Lib.IsDemo ? "catalog start" : "catalog")" @ref="wrapEl">
+    @if (Lib.IsDemo)
+    {
+        @* nessuna cartella aperta (o una cartella senza font): al posto dei font, un'unica grande zona in cui trascinarla *@
+        <div class="dropzone">
+            <div class="dz-inner">
+                <Icon Name="folder-open-fill" Class="dz-icon" />
+                @if (Lib.StatusMessage is { } status)
+                {
+                    <p class="dz-status"><Icon Name="warning-circle" /> @status. Try another folder.</p>
+                }
+                <h2>Drop your font folder here</h2>
+                <p class="dz-sub">See all your typefaces at once, without installing them.</p>
+                <div class="dz-or" aria-hidden="true"><span>or</span></div>
+                <label class="btn dz-btn" for="pick"><Icon Name="folder-open" /> Choose a font folder</label>
+                <p class="dz-note">
+                    Nothing is uploaded: the browser reads the files on your computer. Fonts load only when they appear on screen,
+                    so iCloud downloads only what you look at. You can switch folder later from Menu › Change folder.
+                </p>
+            </div>
+        </div>
+    }
+    else if (Rows.Count == 0)
+    {
+        <p class="empty">No family matches the search or the chosen filters.</p>
+    }
+    else if (Lib.GridView)
+    {
+        @* Righe di schede tutte alte uguali (--grow-h), come le righe dell'elenco: lo scorrimento virtuale non lascia buchi. *@
+        <div class="catalog-grid" style="@GridStyle">
+            <Virtualize Items="GridRows" Context="cards" ItemSize="GridRowHeight" OverscanCount="3">
+                <div class="grid-row">
+                    @foreach (var card in cards)
+                    {
+                        <FamilyCard @key="card.Key" Family="card.Family" Style="card.Style" Note="@card.CardNote" AaSize="AaSize" Title="@card.Title" Anchor="@card.Anchor"
+                                    StyleOptions="card.Options" OnStyle="path => PickStyle(card, path)" />
+                    }
+                </div>
+            </Virtualize>
+        </div>
+    }
+    else
+    {
+        @* Tutte le righe hanno la stessa altezza (--row-h): così lo scorrimento virtuale sa sempre dove si trova e non lascia buchi. *@
+        <div class="catalog-list" style="--row-h:@(RowHeight)px;--spec-lh:@(LineHeight)">
+            <Virtualize Items="Rows" Context="row" ItemSize="RowHeight" OverscanCount="6">
+                <SpecimenRow @key="row.Key" Style="row.Style" Family="@row.Family.Name" FamilyLink="true" Extra="@row.Summary" LinkText="@row.Title" Anchor="@row.Anchor"
+                             StyleOptions="row.Options" OnStyle="path => PickStyle(row, path)" />
+            </Virtualize>
+        </div>
+    }
+</div>

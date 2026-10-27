@@ -1,0 +1,31 @@
+@* Una riga di prova: intestazione con nome (e, nel catalogo, la tendina dello spessore) e crediti, stella per il confronto, testo nel font *@
+@inherits LazyFont
+<div class="row">
+    <div class="meta">
+        @if (FamilyLink)
+        {
+            <button class="lnk" @onclick="() => Lib.OpenFamily(Family, Anchor)">@(LinkText ?? Family)</button>
+        }
+        else
+        {
+            <b>@(Title ?? Style.Label)</b>
+        }
+        @if (StyleOptions is { Count: > 0 })
+        {
+            @* lo spessore (lo stile) da mostrare, scelto qui senza entrare nella famiglia *@
+            <Dropdown Class="sm" Options="StyleOptions" Value="@Style.Path" Disabled="@(StyleOptions.Count < 2)" OnChange="OnStyle" />
+        }
+        <span class="meta-rest">
+            @if (Extra is not null)
+            {
+                <span>@Extra</span>
+            }
+            <span class="cred">@Style.Info?.CreditLine()</span>
+            <span>@Style.FileName</span>
+        </span>
+    </div>
+    <div class="acts">
+        <button class="icon-btn" aria-pressed="@PinnedAttr" title="Add to comparison" aria-label="Add to comparison" @onclick="() => Lib.TogglePinAsync(Style)"><Icon Name="@(PinnedAttr == "true" ? "star-fill" : "star")" /></button>
+    </div>
+    <div class="spec @SpecClass" style="@SpecStyle" title="Open the style page: all characters, proof and credits" @ref="specEl" @onclick="Open">@SpecText</div>
+</div>

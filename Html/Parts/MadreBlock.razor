@@ -1,0 +1,32 @@
+@* Una famiglia madre della proposta, con i comandi per correggerla *@
+<div class="madre">
+    <div class="madre-h">
+        <input class="name" id="@Fmt.Id("mn-", Madre.Name)" aria-label="Family name" value="@Madre.Name" @onchange="Rename" />
+        <span class="n">@Fmt.N(Madre.Total) @Fmt.Plural(Madre.Total, "style", "styles") · @Madre.Variants.Count @Fmt.Plural(Madre.Variants.Count, "variant", "variants")</span>
+        <input class="mini" list="madriList" placeholder="Merge into…" aria-label="Target family" @bind="mergeTarget" />
+        <button class="btn ghost sm" @onclick="Merge">Merge</button>
+        <button class="btn ghost sm" @onclick="() => Lib.OpenFamily(Madre.Name)">View</button>
+    </div>
+    <div class="vars">
+        @foreach (var v in Madre.Variants)
+        {
+            <div class="var-row">
+                <span class="vn">@v.Name</span>
+                <span class="n">@Fmt.N(v.Count) @Fmt.Plural(v.Count, "style", "styles")</span>
+                @if (v.Guessed > 0)
+                {
+                    <span class="badge">name from file</span>
+                }
+                @if (v.Name != "Web")
+                {
+                    @if (Madre.Variants.Count > 1)
+                    {
+                        <button class="btn ghost sm" title="Make this variant a family of its own" @onclick="() => MoveTo(v, v.Name)">Split off</button>
+                    }
+                    <input class="mini" list="madriList" placeholder="Move to…" aria-label="Move the variant to another family" value="@moveTargets.GetValueOrDefault(v.Name)" @onchange="e => SetMoveTarget(v.Name, e)" />
+                    <button class="btn ghost sm" @onclick="() => MoveTo(v, moveTargets.GetValueOrDefault(v.Name))">Move</button>
+                }
+            </div>
+        }
+    </div>
+</div>

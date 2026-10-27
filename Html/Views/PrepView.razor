@@ -1,0 +1,168 @@
+@* Preparazione della cartella: analisi dei font, proposta di famiglie e correzioni (solo dentro l'app) *@
+<div class="prep">
+    <h3 class="set-h" id="set-prep">Folder preparation</h3>
+    <p class="lead">
+        Here the page works out how your folder is organised and suggests how to group the fonts into superfamilies and width variants.
+        Everything stays inside the app: files in the Finder are never moved or renamed.
+    </p>
+
+    @if (Lib.IsDemo)
+    {
+        <div class="card">
+            <h3>No folder open</h3>
+            <p>Choose a folder from Menu › Change folder, or drag it here. Then come back to Settings to analyse it.</p>
+        </div>
+    }
+    else
+    {
+        @* 1. la cartella *@
+        <div class="card" id="prep-folder">
+            <h3>Folder “@Lib.RootName”</h3>
+            <div class="nums">
+                <div><b>@Fmt.N(Folder.Fonts)</b><span>OTF/TTF fonts</span></div>
+                <div><b>@Fmt.N(Folder.Web)</b><span>web fonts</span></div>
+                <div><b>@Fmt.N(Folder.TopFolders.Count)</b><span>folders</span></div>
+                <div><b>@Fmt.N(Folder.Loose)</b><span>loose files</span></div>
+            </div>
+            @if (Folder.Ready)
+            {
+                <p><span class="verdict ok"><Icon Name="check-circle" /> Looks already sorted by family</span></p>
+                <p>You can use it as it is. If the folders don’t match the families, though, the analysis reads the name written inside each font and suggests a better order.</p>
+            }
+            else
+            {
+                <p><span class="verdict warn"><Icon Name="warning-circle" /> The files don’t seem sorted by family</span></p>
+                <p>The folders aren’t enough to tell the families apart. Analyse the fonts: the page reads the family name, style, weight and width that the foundry wrote into each file.</p>
+            }
+        </div>
+
+        @* 2. l'analisi *@
+        <div class="card" id="prep-analysis">
+            <h3>Font analysis</h3>
+            <p>@AnalysisText</p>
+            <div class="bar"><i style="width:@(ProgressPercent)%"></i></div>
+            <div class="src-note">@ProgressText</div>
+            <div class="row-btns">
+                @if (!Lib.Connected)
+                {
+                    <button class="btn" disabled>Reconnect the folder to analyse it</button>
+                }
+                else if (Runner.Running)
+                {
+                    <button class="btn" @onclick="Runner.Stop">Stop</button>
+                }
+                else if (AnalysisComplete)
+                {
+                    <button class="btn" disabled>Analysis complete</button>
+                }
+                else
+                {
+                    <button class="btn" @onclick="StartAnalysis">@(Analyzed > 0 ? "Resume the analysis" : "Analyse the fonts")</button>
+                }
+                <label class="ctl" for="anWeb">
+                    <input type="checkbox" id="anWeb" checked="@Lib.AnalyzeWeb" @onchange="OnAnalyzeWeb" /> also read web fonts (woff)
+                </label>
+                @if (Analyzed > 0 && !Runner.Running)
+                {
+                    <button class="btn ghost sm" @onclick="Lib.ForgetAnalysisAsync">Forget the analysis</button>
+                }
+            </div>
+        </div>
+
+        @* 3. come organizzare *@
+        <div class="card" id="prep-organise">
+            <h3>How to organise the catalog</h3>
+            <label class="radio" for="org-folders">
+                <input type="radio" name="org" id="org-folders" checked="@(Lib.Mode == OrgMode.Folders)" @onchange="() => Lib.SetModeAsync(OrgMode.Folders)" />
+                <span>Use the folders as they are<small>Each top-level folder is a family, its subfolders are the variants.</small></span>
+            </label>
+            <label class="radio" for="org-analysis">
+                <input type="radio" name="org" id="org-analysis" disabled="@(Lib.Proposal is null)" checked="@(Lib.Mode == OrgMode.Analysis)" @onchange="() => Lib.SetModeAsync(OrgMode.Analysis)" />
+                <span>Use the analysis proposal<small>@(Lib.Proposal is null ? "Available after the analysis." : "Families and variants worked out from the data inside the fonts, with your corrections below.")</small></span>
+            </label>
+            @if (Lib.Proposal is not null)
+            {
+                <div class="nums">
+                    <div><b>@Fmt.N(Madri.Count)</b><span>superfamilies</span></div>
+                    <div><b>@Fmt.N(VariantCount)</b><span>variants</span></div>
+                    <div><b>@Fmt.N(Lib.Proposal.Duplicates.Count)</b><span>hidden duplicates</span></div>
+                    <div><b>@Fmt.N(Lib.Proposal.Guessed.Count)</b><span>to check</span></div>
+                    <div><b>@Fmt.N(Lib.Proposal.Unreadable.Count)</b><span>unreadable</span></div>
+                </div>
+                @if (Lib.Fix.Count > 0)
+                {
+                    <div class="row-btns">
+                        <span class="src-note">@Lib.Fix.Count @Fmt.Plural(Lib.Fix.Count, "correction", "corrections") of yours applied</span>
+                        <button class="btn ghost sm" @onclick="ResetCorrections">Undo all corrections</button>
+                    </div>
+                }
+            }
+        </div>
+
+        @if (Lib.Proposal is not null)
+        {
+            @* 5. la proposta, modificabile *@
+            <div class="card" id="prep-proposal">
+                <h3>Proposed families</h3>
+                <p>
+                    Correct where needed: rename a family by typing over its name, merge two families, move a variant
+                    into another family or split it off. Corrections apply to the catalog straight away.
+                </p>
+                <datalist id="madriList">
+                    @foreach (var m in Madri)
+                    {
+                        <option value="@m.Name"></option>
+                    }
+                </datalist>
+                <input class="prop-filter" type="search" id="propFilter" placeholder="Filter the proposed families" value="@Lib.PropQuery" @oninput="OnFilterInput" />
+                <Virtualize Items="ShownMadri" Context="m" ItemSize="120" OverscanCount="4">
+                    <MadreBlock @key="m.Name" Madre="m" />
+                </Virtualize>
+            </div>
+
+            @* 6. doppioni e problemi *@
+            @if (Lib.Proposal.Duplicates.Count > 0)
+            {
+                <details class="card">
+                    <summary>Duplicates hidden from the catalog (@Fmt.N(Lib.Proposal.Duplicates.Count))</summary>
+                    <p>Same font, same version and same size: the catalog shows only one copy, the first in each line.</p>
+                    <div class="plist">
+                        @foreach (var (kept, dup) in Lib.Proposal.Duplicates.Take(ListLimit))
+                        {
+                            <span><b>@kept</b> = @dup</span><br />
+                        }
+                        @MoreNote(Lib.Proposal.Duplicates.Count)
+                    </div>
+                </details>
+            }
+            @if (Lib.Proposal.Guessed.Count > 0)
+            {
+                <details class="card">
+                    <summary>To check (@Fmt.N(Lib.Proposal.Guessed.Count))</summary>
+                    <p>These files don’t declare a family name, so it was taken from the file name. Check that they ended up in the right family.</p>
+                    <div class="plist">
+                        @foreach (var p in Lib.Proposal.Guessed.Take(ListLimit))
+                        {
+                            <span>@p</span><br />
+                        }
+                        @MoreNote(Lib.Proposal.Guessed.Count)
+                    </div>
+                </details>
+            }
+            @if (Lib.Proposal.Unreadable.Count > 0)
+            {
+                <details class="card">
+                    <summary>Unreadable (@Fmt.N(Lib.Proposal.Unreadable.Count))</summary>
+                    <p>The browser can’t open these files: they may be damaged, in an unsupported format, or woff2 without readable data. They are left out of the proposal.</p>
+                    <div class="plist">
+                        @foreach (var p in Lib.Proposal.Unreadable.Take(ListLimit))
+                        {
+                            <span>@p</span><br />
+                        }
+                        @MoreNote(Lib.Proposal.Unreadable.Count)
+                    </div>
+                </details>
+            }
+        }
+    }
+</div>

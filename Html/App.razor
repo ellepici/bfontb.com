@@ -1,0 +1,208 @@
+@* Struttura della pagina: barra dei comandi, indice delle famiglie, percorso e vista corrente (catalogo, famiglia, stile, confronto, impostazioni) *@
+<div class="@(Lib.InkColor is null && Lib.PaperColor is null ? "app" : "app tinted")" style="@ColorVars">
+    @* Testata: a sinistra il logo su tre righe, a destra tre righe che insieme sono alte quanto il logo *@
+    @* Testata su due righe: a sinistra il logo (tre parole alte quanto le due righe), a destra
+       1) testo di prova, testi pronti, corpo e spaziatura, poi chiaro/scuro e il menu; 2) caratteristiche e "include Web" *@
+    <header>
+        <h1 class="logo" aria-label="B(efore) Font B(ook)">
+            <span>b<span class="dim">efore</span></span>
+            <span>font</span>
+            <span>b<span class="dim">ook</span></span>
+        </h1>
+        <div class="hrow hrow-top">
+            @if (!Lib.IsSidePage)
+            {
+                @* comandi del testo di prova: nelle impostazioni non servono *@
+                <div class="controls">
+                @* il testo di prova e, dentro lo stesso riquadro a sinistra, i testi pronti (Pangram, Alphabet…) *@
+                <div class="sample-box">
+                    <span id="lbl-preset" class="sr-only">Preset</span>
+                    <Dropdown Class="in-box" Options="PresetOptions" Value="@CurrentPreset" OnChange="UsePresetNamed" LabelledBy="lbl-preset" />
+                    <input class="sample-input" id="sample" aria-label="Sample text" value="@SampleBoxValue" @oninput="OnSampleInput" />
+                </div>
+                <div class="ctl">
+                    <span id="lbl-size">Size</span>
+                    <Dropdown Editable="true" Options="SizeOptions" Value="@Lib.Size.ToString()" OnChange="OnSize" Parse="ParseSize" Suffix="pt" InputWidth="2.4em" InputMode="decimal" LabelledBy="lbl-size" />
+                </div>
+                @if (!Lib.IsDemo)
+                {
+                    @* spessore e corsivo di tutto il catalogo (le righe con uno stile scelto a mano restano come sono);
+                       restano anche nelle pagine delle famiglie e degli stili, come i filtri: Italic sfoltisce anche l'indice a sinistra *@
+                    <div class="ctl">
+                        <span id="lbl-weight">Weight</span>
+                        <Dropdown Options="WeightOptions" Value="@Lib.Weight.ToString()" OnChange="OnWeight" LabelledBy="lbl-weight" />
+                        <button class="tog-btn" aria-pressed="@(Lib.Italic ? "true" : "false")" title="Catalog in italics: only the families that have them"
+                                @onclick="() => Lib.SetItalicAsync(!Lib.Italic)"><Icon Name="text-italic" /> Italic</button>
+                    </div>
+                }
+                <div class="ctl">
+                    <span id="lbl-track">Tracking</span>
+                    <Dropdown Editable="true" Options="TrackOptions" Value="@Lib.Tracking.ToString()" OnChange="OnTrack" Parse="ParseTracking" Format="FormatTracking" InputWidth="3.2em" LabelledBy="lbl-track" />
+                </div>
+                <div class="ctl">
+                    @* compatta: solo il campione «Aa» con i colori scelti (il nome nel suggerimento), per stare nella riga *@
+                    <span id="lbl-colors" class="sr-only">Colors</span>
+                    <ColorMenu Version="Lib.Version" LabelledBy="lbl-colors" />
+                </div>
+                </div>
+            }
+            <div class="hacts">
+                @* la scelta della cartella: il campo resta sempre nella pagina, lo aprono "Change folder" nel menu e i pulsanti nelle pagine *@
+                <input type="file" id="pick" webkitdirectory directory multiple hidden @ref="pickInput" />
+                @* menu: cartella, impostazioni, chiaro/scuro, pagine e link social *@
+                <div class="menu">
+                    <button class="btn ghost menu-btn" aria-haspopup="true" aria-expanded="@(menuOpen ? "true" : "false")" @onclick="ToggleMenu"><Icon Name="list" /> Menu</button>
+                    @if (menuOpen)
+                    {
+                        <div class="dd-back" @onclick="CloseMenu"></div>
+                        <div class="menu-pop" role="menu" @onkeydown="OnMenuKey">
+                            @* chiaro o scuro: all'inizio segue il sistema (si accende quello in uso), poi resta la scelta fatta *@
+                            <div class="menu-theme">
+                                <span class="menu-k">Appearance</span>
+                                <div class="seg theme-switch" role="group" aria-label="Appearance">
+                                    @foreach (var (value, icon, label) in Themes)
+                                    {
+                                        <button data-t="@value" aria-pressed="@(Lib.Theme == value ? "true" : "false")" title="@label" @onclick="() => Lib.SetThemeAsync(value)"><Icon Name="@icon" /> @label</button>
+                                    }
+                                </div>
+                            </div>
+                            <div class="menu-sep" role="separator"></div>
+                            <label role="menuitem" class="menu-item" for="pick" @onclick="CloseMenuSoon"><Icon Name="folder-open" /> Change folder</label>
+                            <button role="menuitem" class="menu-item" aria-current="@(Lib.View == View.Settings ? "true" : null)" @onclick="MenuSettings">
+                                <Icon Name="gear" /> @(Lib.View == View.Settings ? "Close settings" : "Settings")
+                            </button>
+                            <div class="menu-sep" role="separator"></div>
+                            <button role="menuitem" class="menu-item" aria-current="@(Lib.View == View.Credits ? "true" : null)" @onclick="() => MenuPage(View.Credits)"><Icon Name="info" /> Credits</button>
+                            <button role="menuitem" class="menu-item" aria-current="@(IsFeedback(FeedbackKind.Bug) ? "true" : null)" @onclick="() => MenuFeedback(FeedbackKind.Bug)"><Icon Name="bug" /> Report a bug</button>
+                            <button role="menuitem" class="menu-item" aria-current="@(IsFeedback(FeedbackKind.Feature) ? "true" : null)" @onclick="() => MenuFeedback(FeedbackKind.Feature)"><Icon Name="lightbulb" /> Suggest a feature</button>
+                            <div class="menu-sep" role="separator"></div>
+                            <div class="menu-k">Follow</div>
+                            @foreach (var (name, icon, url) in Social)
+                            {
+                                <a role="menuitem" class="menu-item" href="@url" target="_blank" rel="noopener" @onclick="CloseMenu"><Icon Name="@icon" /> @name</a>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        @if (!Lib.IsSidePage)
+        {
+        <div class="hrow hrow-filters">
+            @* filtri per caratteristica, nella riga sotto il testo di prova *@
+            @if (!Lib.IsDemo)
+            {
+            <div class="filters" role="group" aria-labelledby="lbl-traits">
+                <span class="filters-h" id="lbl-traits">Characteristics</span>
+                <div class="chips">
+                    @foreach (var chip in TraitChips)
+                    {
+                        <button class="chip" aria-pressed="@(chip.Active ? "true" : "false")" disabled="@(chip.Count == 0 && !chip.Active)" @onclick="() => Lib.ToggleFilterAsync(chip.Trait)">
+                            @if (chip.Active)
+                            {
+                                <Icon Name="check" Class="chip-check" />
+                            }
+                            @chip.Label <span class="n">@chip.Count</span>
+                        </button>
+                    }
+                </div>
+                @if (Lib.Filters != FontTrait.None)
+                {
+                    <button class="lnk" @onclick="Lib.ClearFiltersAsync">Clear</button>
+                }
+                @if (Lib.ClassificationIsPartial)
+                {
+                    @* i filtri finora leggono solo i nomi: un'icona info spiega cosa vuol dire e porta all'analisi *@
+                    <span class="info-tip">
+                        <button class="info-btn" aria-label="About these filters" aria-describedby="tip-traits"><Icon Name="info" /></button>
+                        <span class="tip" role="tooltip" id="tip-traits">
+                            <b>Based on names only.</b>
+                            For now the filters read just the font and folder names, for example “Serif” or “Mono” in “Plex Mono”,
+                            so some fonts can be missing or in the wrong group.
+                            <button class="lnk" @onclick="Lib.OpenSettings">Analyse the folder</button> to sort them with the data inside each font.
+                        </span>
+                    </span>
+                }
+            </div>
+            }
+            <label class="ctl web" for="web"><input type="checkbox" id="web" checked="@Lib.IncludeWeb" @onchange="OnWebToggle" /> include Web (woff)</label>
+        </div>
+        }
+    </header>
+
+    @if (Lib.IsSidePage)
+    {
+        <aside class="set-aside"><SettingsNav Version="Lib.Version" /></aside>
+    }
+    else
+    {
+    <aside>
+        @if (Lib.IsDemo)
+        {
+            <p class="aside-empty">Your typefaces will appear here, family by family, as soon as you choose a folder.</p>
+        }
+        else
+        {
+            <input type="search" id="q" placeholder="Search family or variant" aria-label="Search family" value="@Lib.Query" @oninput="OnQueryInput" />
+            <ul class="fam-list">
+                @foreach (var row in IndexRows)
+                {
+                    @if (row.Letter is not null)
+                    {
+                        <li class="letter" aria-hidden="true">@row.Letter</li>
+                    }
+                    <li>
+                        <button aria-current="@IsCurrent(row.Family)" @onclick="() => PickFamily(row.Family)">
+                            <span>@row.Family.Name</span><span class="n">@row.Family.Count(Lib.IncludeWeb)</span>
+                        </button>
+                        @if (OpenVariants(row.Family) is { Count: > 0 } variants)
+                        {
+                            @* le varianti (sottofamiglie) della famiglia aperta, rientrate sotto il suo nome *@
+                            <ul class="var-list" aria-label="@($"Variants of {row.Family.Name}")">
+                                @foreach (var (name, count) in variants)
+                                {
+                                    <li>
+                                        <button aria-current="@IsCurrentVariant(row.Family, name)" @onclick="() => OpenVariant(row.Family, name)">
+                                            <span>@name</span><span class="n">@count</span>
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </aside>
+    }
+
+    <main class="@(Lib.View == View.Style ? "locked" : null)">
+        <Breadcrumbs Version="Lib.Version" />
+        @* Solo questa parte scorre: la barra di scorrimento parte sotto il percorso, dove iniziano i font *@
+        <div class="view" data-key="@ShownKey">
+        @if (!Lib.IsDemo && !Lib.Connected)
+        {
+            <div class="reconnect">
+                <p>
+                    <strong>Folder “@Lib.RootName” remembered from last time.</strong>
+                    Families, corrections and analysed credits are all here; reconnect the folder to see the typefaces.
+                    The browser asks you to pick it again after every reload.
+                </p>
+                <label class="btn" for="pick"><Icon Name="folder-open" /> Reconnect the folder</label>
+            </div>
+        }
+        @* senza cartella si vede solo la zona in cui trascinarla (nel catalogo), tranne le impostazioni *@
+        @switch (Lib.IsDemo && !Lib.IsSidePage ? View.Catalog : Lib.View)
+        {
+            case View.Catalog: <CatalogView Version="Lib.Version" /> break;
+            case View.Family: <FamilyView Version="Lib.Version" /> break;
+            case View.Compare: <CompareView Version="Lib.Version" /> break;
+            case View.Settings: <SettingsView Version="Lib.Version" /> break;
+            case View.Credits: <CreditsView /> break;
+            case View.Feedback: <FeedbackView Version="Lib.Version" /> break;
+            case View.Style: <StyleView Version="Lib.Version" /> break;
+        }
+        </div>
+    </main>
+</div>
+

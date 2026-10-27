@@ -1,0 +1,50 @@
+@* Tendina disegnata da noi (non quella di sistema). Normale: un pulsante con il valore scelto.
+   Modificabile (Editable): un campo in cui scrivere un valore qualsiasi, più la freccia che apre le scelte pronte. *@
+<div class="@CssClass">
+    @if (Editable)
+    {
+        <div class="dd-field">
+            <input id="@uid" class="dd-input" @ref="input" value="@text" disabled="@Disabled" inputmode="@InputMode"
+                   autocomplete="off" spellcheck="false" style="@($"width:{InputWidth}")"
+                   role="combobox" aria-expanded="@(open ? "true" : "false")" aria-autocomplete="none"
+                   aria-labelledby="@LabelledBy" @onfocus="() => Close(false)" @oninput="OnTyping" @onchange="OnCommit" @onkeydown="OnFieldKey" />
+            @if (Suffix is not null)
+            {
+                <span class="dd-suf" aria-hidden="true">@Suffix</span>
+            }
+            <button type="button" class="dd-tog" tabindex="-1" disabled="@Disabled" aria-label="Show choices" @onclick="Toggle">
+                <Icon Name="caret-down" Class="dd-caret" />
+            </button>
+        </div>
+    }
+    else
+    {
+        <button type="button" id="@uid" class="dd-btn" @ref="btn" disabled="@Disabled"
+                aria-haspopup="listbox" aria-expanded="@(open ? "true" : "false")"
+                aria-labelledby="@(LabelledBy is null ? null : $"{LabelledBy} {uid}")" @onclick="Toggle" @onkeydown="OnFieldKey">
+            <span class="dd-val">@CurrentLabel</span>
+            <Icon Name="caret-down" Class="dd-caret" />
+        </button>
+    }
+    @if (open)
+    {
+        <div class="dd-back" @onclick="() => Close(false)"></div>
+        <ul class="dd-list" role="listbox" tabindex="-1" @ref="list" aria-labelledby="@LabelledBy" aria-activedescendant="@OptionId(active)"
+            @onkeydown="OnListKey" @onkeydown:preventDefault="true">
+            @for (int i = 0; i < Options.Count; i++)
+            {
+                var k = i;
+                var o = Options[i];
+                <li id="@OptionId(i)" role="option" aria-selected="@(o.Value == Value ? "true" : "false")"
+                    class="@OptionClass(i, o)" @onclick="() => Pick(k)" @onmouseenter="() => Hover(k)">
+                    <Icon Name="check" Class="dd-check" />
+                    <span>@o.Label</span>
+                    @if (o.Note is not null)
+                    {
+                        <em>@o.Note</em>
+                    }
+                </li>
+            }
+        </ul>
+    }
+</div>

@@ -1,0 +1,47 @@
+@* Colori dei testi di prova: coppie pronte, testo e sfondo (tavolozza o codice esadecimale), scambio e ritorno al tema *@
+<div class="@(open ? "dd cm open" : "dd cm")">
+    <button type="button" class="dd-btn cm-btn" aria-haspopup="dialog" aria-expanded="@(open ? "true" : "false")"
+            aria-label="@($"Colors: {CurrentName}")" title="@($"Colors: {CurrentName}")" @onclick="Toggle">
+        <span class="cm-sw" style="@Swatch(Lib.InkColor, Lib.PaperColor)">Aa</span>
+        <Icon Name="caret-down" Class="dd-caret" />
+    </button>
+    @if (open)
+    {
+        <div class="dd-back" @onclick="Close"></div>
+        <div class="cm-pop" role="dialog" aria-label="Sample colors" @onkeydown="OnKey">
+            <div class="cm-presets">
+                @foreach (var p in Presets)
+                {
+                    <button type="button" class="@(IsCurrent(p) ? "cm-preset on" : "cm-preset")" @onclick="() => Use(p.Ink, p.Paper)">
+                        <span class="cm-sw" style="@Swatch(p.Ink, p.Paper)">Aa</span><span>@p.Name</span>
+                    </button>
+                }
+            </div>
+            @foreach (var (label, isInk) in new[] { ("Text", true), ("Background", false) })
+            {
+                var current = isInk ? Lib.InkColor : Lib.PaperColor;
+                <div class="cm-row">
+                    <span class="cm-lab">@label</span>
+                    <span class="cm-cur" style="@($"background:{current ?? (isInk ? "var(--ink)" : "var(--sheet)")}")"></span>
+                    <input class="cm-hex" aria-label="@($"{label} color, hexadecimal")" spellcheck="false" autocomplete="off" maxlength="7"
+                           placeholder="auto" value="@current" @onchange="e => OnHex(isInk, e)" />
+                </div>
+                <div class="cm-pal" role="group" aria-label="@($"{label} colors")">
+                    @foreach (var c in Palette)
+                    {
+                        <button type="button" class="@(string.Equals(c, current, StringComparison.OrdinalIgnoreCase) ? "cm-c on" : "cm-c")"
+                                style="@($"background:{c}")" title="@c" aria-label="@c" @onclick="() => Pick(isInk, c)"></button>
+                    }
+                </div>
+            }
+            <div class="cm-foot">
+                <button type="button" class="btn ghost sm" @onclick="Swap"><Icon Name="arrows-down-up" /> Swap</button>
+                <button type="button" class="btn ghost sm" disabled="@(Lib.InkColor is null && Lib.PaperColor is null)" @onclick="() => Use(null, null)"><Icon Name="arrow-counter-clockwise" /> Reset</button>
+                @if (LowContrast is { } ratio)
+                {
+                    <span class="cm-warn" title="@($"Contrast {ratio:0.0}:1 (at least 4.5:1 reads well)")"><Icon Name="warning-circle" /> Low contrast</span>
+                }
+            </div>
+        </div>
+    }
+</div>

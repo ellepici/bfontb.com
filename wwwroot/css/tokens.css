@@ -1,0 +1,76 @@
+/* Colori e caratteri dell'interfaccia: banco da tipografo, carta chiara e matita blu da correttore di bozze */
+:root {
+  --paper: #f2f3ef;
+  --sheet: #fbfbf8;
+  --ink: #16171a;
+  --muted: #6b6f68;
+  --rule: #d9dbd3;
+  --proof: #2a3fd6;
+  --proof-soft: #e3e6fb;
+  --star: #c7461f;
+  --ok: #2f7d4f;
+  /* Un solo carattere neutro per tutta l'interfaccia, Inter (rsms.me/inter): la gerarchia la fanno peso, corpo e taglio ottico.
+     --f-display: titoli (Inter Display, scelto da solo dal taglio ottico ai corpi grandi); --f-data: numeri e dati, con cifre tabellari. */
+  --f-ui: "Inter", "Helvetica Neue", Arial, sans-serif;
+  --f-display: var(--f-ui);
+  --f-data: var(--f-ui);
+  color-scheme: light;
+}
+
+/* La versione variabile, quando il browser la supporta: pesi intermedi e taglio ottico continuo */
+@supports (font-variation-settings: normal) {
+  :root { --f-ui: "InterVariable", "Inter", "Helvetica Neue", Arial, sans-serif; }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #111214; --sheet: #18191c; --ink: #ecece6; --muted: #9a9d95; --rule: #2c2e31;
+    --proof: #8f9cff; --proof-soft: #23284a; --star: #ff8a5c; --ok: #6fcf97;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #111214; --sheet: #18191c; --ink: #ecece6; --muted: #9a9d95; --rule: #2c2e31;
+  --proof: #8f9cff; --proof-soft: #23284a; --star: #ff8a5c; --ok: #6fcf97;
+  color-scheme: dark;
+}
+
+/* La pagina è sempre alta quanto la finestra: scorrono solo l'indice e la colonna dei caratteri */
+html, body { height: 100%; }
+body { overflow: hidden; }
+#app { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-ui);
+  font-size: 14px;
+  font-optical-sizing: auto;
+  font-feature-settings: 'liga' 1, 'calt' 1;   /* come consiglia rsms.me per Chrome */
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+}
+
+button, input, select { font: inherit; color: inherit; }
+
+/* Gerarchia: titoli in Inter Display, pesanti e stretti; etichette piccole in maiuscolo spaziato */
+h1, h2, h3, h4 { font-family: var(--f-display); font-optical-sizing: auto; letter-spacing: -.022em; }
+
+/* I testi di prova non ereditano nulla dal carattere dell'interfaccia */
+.row .spec, .wf div, .para, .gc, .gx-char { font-feature-settings: normal; font-variant-numeric: normal; letter-spacing: normal; }
+/* Contorno di attivazione disegnato dentro il bordo: le colonne che non scorrono tagliano ciò che sporge (a sinistra spariva) */
+:focus-visible { outline: 2px solid var(--proof); outline-offset: -2px; }
+input:focus, select:focus { outline: 2px solid var(--proof); outline-offset: -2px; }
+[hidden] { display: none !important; }
+
+/* Icone Phosphor: grandi quanto il testo, nel suo colore */
+.ph { width: 1em; height: 1em; flex: none; display: inline-block; vertical-align: -0.14em; }
+.ph.inline { width: 1.05em; height: 1.05em; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto !important; transition: none !important; }
+}

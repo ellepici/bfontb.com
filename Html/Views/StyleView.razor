@@ -1,0 +1,109 @@
+@* Pagina di uno stile nella colonna dei caratteri: tutti i caratteri, prova a vari corpi, crediti *@
+@if (Ref is null)
+{
+    <p class="empty">This style is no longer in the folder. Choose a family from the list on the left.</p>
+}
+else
+{
+    var style = Ref.Style;
+    var family = Ref.Family.Name;
+    <div class="sv">
+    <div class="sv-head">
+        <div class="sv-title">
+            <div class="sv-name">
+                <h2>@(Ref.Variant is "Web" ? family : Ref.Variant) <span>@style.Label</span></h2>
+                <div class="sv-acts">
+                    <button class="btn ghost sm cred-btn" aria-expanded="@(showCredits ? "true" : "false")" aria-controls="credPanel" @onclick="ToggleCredits">Credits</button>
+                    <button class="icon-btn" aria-pressed="@PinnedAttr(style)" title="Add to comparison" aria-label="Add to comparison" @onclick="() => Lib.TogglePinAsync(style)"><Icon Name="@(PinnedAttr(style) == "true" ? "star-fill" : "star")" /></button>
+                </div>
+            </div>
+            <div class="sub">@PathLine(style)</div>
+            @if (showCredits)
+            {
+                @* pannello dei crediti di questo file: resta aperto passando da uno stile all'altro, per confrontarli *@
+                <div class="cred-back" @onclick="ToggleCredits"></div>
+                <div class="cred-pop" id="credPanel" role="dialog" aria-label="@($"Credits of {style.FileName}")">
+                    <div class="cred-pop-h">
+                        <span>Credits written in the file <b>@style.FileName</b></span>
+                        <button class="btn ghost sm" @onclick="ToggleCredits">Close</button>
+                    </div>
+                    <CreditsList Style="style" />
+                    <SearchLinks Family="@family" Info="style.Info" />
+                </div>
+            }
+        </div>
+    </div>
+
+    @* Scelta della variante (sottofamiglia: Condensed, Poster, Twe ITC…) e dello stile dentro la variante *@
+    <div class="sv-bar">
+        <div class="pick">
+            <span id="lbl-variant">Variant <em>@VariantList.Count</em></span>
+            <Dropdown Class="lg" Options="VariantOptions" Value="@Ref.Variant" Disabled="@(VariantList.Count < 2)" OnChange="OnVariant" LabelledBy="lbl-variant" />
+        </div>
+        <div class="pick">
+            <span id="lbl-style">Style <em>@VariantStyles.Count</em></span>
+            <Dropdown Class="lg" Options="StyleOptions" Value="@style.Path" Disabled="@(VariantStyles.Count < 2)" OnChange="OnStyle" LabelledBy="lbl-style" />
+        </div>
+        <div class="sv-tabs" role="tablist" aria-label="Style sections">
+            <button class="tab" role="tab" aria-selected="@TabSel(Tab.Glyphs)" @onclick="() => Show(Tab.Glyphs)">Characters @if (TabCount is long n) { <span class="n"><FlowNumber Value="n" /></span> }</button>
+            <button class="tab" role="tab" aria-selected="@TabSel(Tab.Proof)" @onclick="() => Show(Tab.Proof)">Proof</button>
+        </div>
+    </div>
+
+    <div class="@(tab == Tab.Glyphs ? "sv-body fill" : "sv-body")">
+    @if (style.Status == LoadStatus.Error)
+    {
+        <p class="empty">This file doesn’t open in the browser (unsupported format or damaged).</p>
+    }
+    else if (!style.IsDemo && !Lib.Connected)
+    {
+        <p class="empty">Reconnect the folder (Menu › Change folder) to see this typeface.</p>
+    }
+    else if (tab == Tab.Glyphs)
+    {
+        @if (style.IsDemo)
+        {
+            <GlyphExplorer Style="style" Set="null" />
+        }
+        else if (Set?.Error is not null && Drawable(style))
+        {
+            <p class="empty">@Set.Error</p>
+        }
+        else if (ShownSet is not null && ShownStyle is not null)
+        {
+            @* sempre lo stesso componente: passando a un altro stile resta il precedente, un po' spento, finché il nuovo non è pronto;
+               così i numeri (caratteri, forme alternative) scorrono dal vecchio al nuovo valore invece di ricomparire *@
+            <div class="@(Ready ? "gx-host" : "gx-host waiting")">
+                <GlyphExplorer Style="ShownStyle" Set="ShownSet" />
+            </div>
+        }
+        else
+        {
+            <p class="empty">Reading the characters in the file…</p>
+        }
+    }
+    else if (tab == Tab.Proof)
+    {
+        @if (!Drawable(style))
+        {
+            <p class="empty">Loading the font…</p>
+        }
+        else
+        {
+            <div class="spec-sheet">
+            <div class="sec-l">Size waterfall</div>
+            @foreach (var size in Sizes)
+            {
+                <div class="wf">
+                    <span>@size pt</span>
+                    <div style="@StyleAt(style, size)">@Lib.TextFor(family)</div>
+                </div>
+            }
+            <div class="sec-l">Running text</div>
+            <p class="para" style="@($"{style.Css};font-size:17px;line-height:1.55")">@Paragraph</p>
+            </div>
+        }
+    }
+    </div>
+    </div>
+}

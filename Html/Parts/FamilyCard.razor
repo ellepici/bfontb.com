@@ -1,0 +1,33 @@
+@* Una scheda a griglia: «Aa» nel font, una nota (quanti stili, o il peso) e il nome (della famiglia o dello stile) *@
+@inherits LazyFont
+@if (StyleOptions is { Count: > 0 })
+{
+    @* nel catalogo: sotto «Aa» lo stile mostrato, con le maniglie per passare a quello prima o dopo (come in Libro Font) *@
+    <div class="@(Current ? "fcard on" : "fcard")" role="button" tabindex="0" title="@TitleText" @onclick="Open" @onkeydown="OnKey">
+        <span class="tile">
+            <span class="aa @LoadClass" style="@AaStyle" @ref="specEl">@(Style.Status == LoadStatus.Error ? "?" : "Aa")</span>
+            <span class="fc-bar">
+                @if (StyleOptions.Count > 1)
+                {
+                    <button type="button" class="fc-step" tabindex="-1" aria-label="Previous style" @onclick="() => Step(-1)" @onclick:stopPropagation="true"><Icon Name="caret-left" /></button>
+                }
+                <span class="n">@Style.Label</span>
+                @if (StyleOptions.Count > 1)
+                {
+                    <button type="button" class="fc-step" tabindex="-1" aria-label="Next style" @onclick="() => Step(1)" @onclick:stopPropagation="true"><Icon Name="caret-right" /></button>
+                }
+            </span>
+        </span>
+        <span class="name">@(Title ?? Family.Name)</span>
+    </div>
+}
+else
+{
+    <button class="@(Current ? "fcard on" : "fcard")" title="@TitleText" @onclick="Open">
+        <span class="tile">
+            <span class="aa @LoadClass" style="@AaStyle" @ref="specEl">@(Style.Status == LoadStatus.Error ? "?" : "Aa")</span>
+            <span class="n">@Note</span>
+        </span>
+        <span class="name">@(OpensStyle ? Style.Label : Title ?? Family.Name)</span>
+    </button>
+}
