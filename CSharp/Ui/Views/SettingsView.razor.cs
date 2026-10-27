@@ -57,39 +57,85 @@ public partial class SettingsView
         ("Open the folder here.", "If Folder preparation below says “Looks already sorted by family”, you’re done. If not, Font analysis reads the names inside the fonts and suggests how to group them."),
     ];
 
-    /// <summary>Il prompt da dare a un'AI che può leggere e spostare i file: chiede un piano da approvare e un registro per tornare indietro.</summary>
+    /// <summary>
+    /// Il prompt da dare a un'AI che può leggere e spostare i file (per esempio con fontTools): le stesse regole della guida,
+    /// più i casi incontrati nelle cartelle vere (nomi dei PDF, refusi delle fonderie, nomi tedeschi, file nella cartella
+    /// sbagliata). Chiede prima un piano da approvare, poi un registro per tornare indietro; non cancella mai niente.
+    /// </summary>
     private const string Prompt = """
-        You have access to my font folder. Reorganise it so that every typeface family has its own folder and every file has a readable, uniform name, following the rules below. This is my working library: be careful, only move and rename files, never delete or modify their contents.
+        You have access to my font folder. Reorganise it so that every typeface family has its own folder and every font file has a readable, uniform name, following the rules below. This is my working library: only move and rename files. Never delete anything, never change the contents of a file, never unzip archives.
 
-        TARGET STRUCTURE
+        ━━ 1. BEFORE YOU START
+        1.1 Work on the folder I gave you and nothing outside it. Don't follow symbolic links and skip hidden and system files (.DS_Store, Icon\r, ._*).
+        1.2 If the folder is in iCloud or another cloud drive, some files may exist only as placeholders: if a file can't be read, stop and ask me to download the whole folder ("Keep Downloaded" in the Finder) instead of skipping it.
+        1.3 Count every file at the start. The same number must be there at the end (moved files included).
+
+        ━━ 2. TARGET STRUCTURE
         <font folder>/
-          <Family>/                one folder per family, e.g. "ABC Marfa", "Adobe Garamond"
-            <font files>           if the family has a single variant, its files go straight here
-            <Family Variant>/      if it has several variants, one subfolder each (the main one too), full name: "ABC Marfa", "ABC Marfa Mono", "ABC Marfa Variable"
-            Web/                   the .woff and .woff2 files of that family
-            Extra/                 licences, PDFs, specimens, images and any file that is not a font
-          _duplicates/             duplicates set aside, keeping their original relative path
-          _organise_log/           your plan and your log
+          <Family>/                 one folder per family: "ABC Marfa", "Adobe Garamond", "Rubis"
+            <font files>            a family with a single variant: its files go straight here
+            <Family Variant>/       a family with several variants: one subfolder each, the main one too, with its full name:
+                                    "ABC Marfa", "ABC Marfa Mono", "ABC Marfa Condensed", "ABC Marfa Variable"
+            Web/                    the .woff and .woff2 files of that family
+            Extra/                  licences, PDFs, specimens, images, archives and every other file that is not a font
+          _duplicates/              duplicates set aside, keeping their original relative path
+          _organise_log/            your plan, your log and your report
 
-        RULES
-        1. Identify each font from the data inside the file, not from its file or folder name: read the name table (typographic family, ID 16, or family, ID 1; subfamily IDs 17 or 2; foundry and designer, IDs 8 and 9), for example with fontTools. Use the file name only for fonts that can't be read.
-        2. Group by family, not by foundry. Everything that shares the family name goes in the same family folder: "ABC Marfa Mono" and "ABC Marfa Semi Mono" belong in "ABC Marfa".
-        3. Variants are widths (Condensed, Compressed, Narrow, Extended, Wide…), optical sizes (Text, Display, Caption, Subhead, Micro…), sub-families (Mono, Semi Mono, Rounded, Stencil…) and variable fonts (their own "<Family> Variable" subfolder). Weights and italics (Thin, Light, Regular, Bold, Black, Italic, Oblique…) are NOT variants: they stay together in the same folder.
-        4. Folder names: the family name in normal capitalisation, as the foundry writes it. No foundry prefix unless it is part of the name, no version numbers, dates, "Trial", "Demo", "OTF", "TTF", "Desktop" or "Fonts".
-        5. File names: rename every font file as <Family>-<Weight>[-Italic][-Trial].<ext>, built from the names inside the font, so that all names are readable and uniform:
-           - <Family> is the full name of the variant without spaces, keeping its capitals: "ABC Marfa" → "ABCMarfa", "ABC Marfa Mono" → "ABCMarfaMono", "ABC Asfalt Condensed" → "ABCAsfaltCondensed". Variable fonts: "<Family>-Variable", e.g. "ABCMarfa-Variable.ttf".
-           - <Weight> is the weight in one CamelCase word: Thin, ExtraLight, Light, Regular, Book, Medium, SemiBold, Bold, ExtraBold, Black (keep the font's own word, such as Roman or Heavy, if it uses one).
-           - "-Italic" only for italics (or "-Oblique" if the font calls it so), always after the weight: "Agipo-Regular-Italic.otf", "Agipo-Bold-Italic.otf".
-           - "-Trial" or "-Demo" stays at the end for trial and demo fonts, so they remain recognisable.
-           - Keep the extension, in lower case. If two files would get the same name, treat them as duplicates (rule 6); if they are not the same font, don't rename them and list them in the report.
-        6. Duplicates: identical files, copies like "Regular (2).otf", or the same font both as .otf and .ttf. Keep one in place (prefer .otf, then the most recent version) and move the others into _duplicates/.
-        7. Files you can't place or name with confidence: leave them where they are and list them in the report.
-        8. Remove folders that end up empty, and list them in the report.
+        ━━ 3. IDENTIFY EACH FONT FROM THE DATA INSIDE IT
+        3.1 Read the name table of every font (fontTools or similar): typographic family (ID 16) or family (ID 1), typographic subfamily (ID 17) or subfamily (ID 2), full name (ID 4), PostScript name (ID 6), foundry and designer (IDs 8 and 9). Also read the weight (OS/2 usWeightClass), the italic flags (OS/2 fsSelection, head macStyle) and whether it is variable (fvar table). For .ttc/.otc collections read every font inside.
+        3.2 Use the file and folder names only to confirm, or for fonts that can't be read.
+        3.3 Clean the names before using them:
+            - Fonts extracted from PDFs have six capitals and a plus in front, and the PostScript name as their family: "ZOUTJY+Rubis-BoldItalic" → family "Rubis", style "Bold Italic". Remove the prefix and split family and style.
+            - Drop licensing and packaging words that aren't part of the name: Std, Pro, LT, MT, BT, Unlicensed, Trial, Demo, Test, Webfont, OTF, TTF, Desktop. (Remember Trial or Demo for the file name, rule 5.)
+            - Foundries sometimes misspell their own fonts ("ABC Asflat" inside an ABC Asfalt file) or use accents inconsistently ("Landnáma"/"Landnama"): use the spelling the foundry uses on its website and in the rest of the family.
+            - Translate localised style names into English: Kursiv → Italic, Fett → Bold, Halbfett → SemiBold, Buch → Book, Mager → Light, Leicht → Light, Mittel → Medium, Schmal → Condensed, Breit → Extended. When a whole family has a German name and an official English one (AG Buch BQ → AG Book), use the English one and tell me.
+            - Some fonts saved from websites have meaningless names ("Mnolrwxsnkatqzpwfxfsladpaya", "Copyright Type Supply"): identify them from the file name, the folder, the foundry fields or the glyph count, and list them in the report.
+        3.4 Mark as partial copies the fonts extracted from PDFs or websites (prefix like "ABCDEF+", very few glyphs): they keep their place in their family but go in the report, so I know they are incomplete.
 
-        PROCESS
-        1. Scan the whole folder first. Write the plan to _organise_log/plan.csv (current path, new path, reason) and show me a summary: how many families and variants, how many files would move or be renamed (with a few examples of old → new names), the duplicates and the doubtful cases. Wait for my OK before moving or renaming anything.
-        2. After my OK, move and rename the files as planned and write _organise_log/moves.csv (old path, new path), so every change can be undone.
-        3. At the end, tell me how many families, variants and fonts there are, and list anything that went wrong or needs my decision.
+        ━━ 4. GROUP BY FAMILY
+        4.1 Group by family, not by foundry. Everything that shares the family name goes in the same family folder: "ABC Marfa Mono" and "ABC Marfa Semi Mono" belong in "ABC Marfa", "Neue Haas Grotesk Text" and "Neue Haas Grotesk Display" in "Neue Haas Grotesk".
+        4.2 Variants are widths (Condensed, Compressed, Narrow, Extended, Expanded, Wide…), optical sizes (Text, Display, Caption, Subhead, Micro, Poster…), sub-families (Mono, Semi Mono, Sans, Serif, Slab, Rounded, Stencil, Inline…) and variable fonts (their own "<Family> Variable" subfolder; a variable italic goes there too).
+        4.3 Weights and italics are NOT variants: Thin, ExtraLight, Light, Regular, Book, Medium, SemiBold, Bold, ExtraBold, Black, Heavy and their Italic or Oblique stay together in the same folder.
+        4.4 Folder names: the family name as the foundry writes it, in normal capitalisation ("ABC Marfa", not "ABCMARFA" or "abc marfa"). Keep the foundry prefix only when it is part of the commercial name (ABC, PP, GT, TT…), never add one. No versions, dates, "Trial", "Demo", "OTF", "TTF", "Desktop", "Fonts" or "Webfonts".
+        4.5 If my folder already uses a name for a family, keep my name unless it is clearly a mistake, and tell me where my name and the font's name differ.
+        4.6 Fonts in the wrong place: a file whose family doesn't match its folder (for example "Syne" inside "Söhne", or "Gza" inside a folder called "Bold") moves to the folder of its own family, created if needed.
+        4.7 Loose files at the top of the folder go into their family folder.
+        4.8 Folders that hold several unrelated families (a pack, a downloads folder, an old export) are split into one folder per family.
+
+        ━━ 5. FILE NAMES
+        5.1 Rename every font file as <Family>-<Weight>[-Italic][-Trial].<ext>, built from the names inside the font:
+            - <Family> = the full name of the variant without spaces, keeping its capitals: "ABC Marfa" → "ABCMarfa", "ABC Marfa Mono" → "ABCMarfaMono", "ABC Asfalt Condensed" → "ABCAsfaltCondensed". Letters and digits only, no accents (ä → a, é → e).
+            - <Weight> = one CamelCase word: Hairline, Thin, ExtraLight, Light, Book, Regular, Medium, SemiBold, Bold, ExtraBold, Black, Heavy. Keep the font's own word when it has one (Roman, Fat, Poster, a number like 40 or 65), translated into English (rule 3.3). If the style names are missing or contradictory, use usWeightClass: 100 Thin, 200 ExtraLight, 300 Light, 400 Regular, 500 Medium, 600 SemiBold, 700 Bold, 800 ExtraBold, 900 Black.
+            - "-Italic" only for italics ("-Oblique" if the font calls it so), always after the weight: "Agipo-Regular-Italic.otf", "Agipo-Bold-Italic.otf".
+            - Other style words that are not the weight stay after it, in CamelCase: "AGBook-Bold-Outline.otf", "Haarlem-Regular-SmallCaps.otf".
+            - Variable fonts: "<Family>-Variable[-Italic]", e.g. "ABCMarfa-Variable.ttf", "ABCMarfa-Variable-Italic.ttf".
+            - "-Trial" or "-Demo" at the very end for trial and demo fonts, so they stay recognisable.
+            - Keep the extension, in lower case (.otf, .ttf, .woff, .woff2, .ttc).
+        5.2 Never repeat a word: no "HeavyHeavy", "FactorAFactorA", "Bold-Bold". If the family name already contains the width or the optical size, don't add it again.
+        5.3 If two files would get the same name: identical fonts → duplicates (rule 6); different fonts → add what tells them apart (version, the font's own style word) or leave them as they are and ask me.
+        5.4 Rename in two passes (first to temporary names, then to the final ones) so that a chain of renames never overwrites a file.
+        5.5 Web fonts follow the same rule inside Web/: "ABCMarfa-Bold.woff2".
+
+        ━━ 6. DUPLICATES
+        6.1 Duplicates are: byte-identical files; copies like "Regular (2).otf" or "Regular copy.otf"; the same font in .otf and .ttf; the same font in two folders.
+        6.2 Keep one in place: the .otf over the .ttf, then the most recent version (name ID 5), then the complete one over a partial copy. Move the others into _duplicates/, keeping their original relative path.
+        6.3 Two files with the same name but a different version or a different number of glyphs are not duplicates: keep both, add the version to the name of the older one, and tell me.
+
+        ━━ 7. WHAT YOU DON'T DO
+        7.1 Never delete, overwrite or edit files. Never unzip archives: put them in Extra/ and list them.
+        7.2 Don't guess. Files you can't place or name with confidence stay where they are, listed in the report.
+        7.3 Folders that end up empty: list them, don't remove them unless I say so.
+
+        ━━ 8. PROCESS
+        8.1 Scan the whole folder first, without changing anything.
+        8.2 Write the plan to _organise_log/plan.csv with the columns: current path, new path, action (move, rename, duplicate, extra, keep), reason, family, variant, style, weight, italic, version.
+        8.3 Show me a summary and wait for my OK before moving or renaming anything:
+            - how many files, families and variants, before and after;
+            - how many files would move, be renamed, go into _duplicates/ or Extra/;
+            - ten examples of old → new names;
+            - the families you renamed and why (typos, German names, foundry prefixes), the fonts in the wrong folder, the partial copies, the meaningless names, the files you couldn't read, and every case that needs my decision.
+        8.4 After my OK, carry out the plan exactly and write _organise_log/moves.csv (old path, new path) as you go, plus a script _organise_log/undo that moves everything back.
+        8.5 At the end, check that every file is still there (same count as at the start), that no two files share a name in the same folder and that no font is left loose at the top. Write _organise_log/report.md and tell me: families, variants and fonts after the change, what went wrong, and what is left for me to decide.
         """;
 
     private bool copied;
