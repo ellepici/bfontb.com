@@ -18,7 +18,9 @@ public sealed class AnalysisCache(BrowserBridge bridge)
             {
                 if (pair.Length != 2) continue;
                 var info = JsonSerializer.Deserialize<FontInfo>(pair[1], Json);
-                if (info is not null) result[pair[0]] = info;
+                if (info is null) continue;
+                OpenTypeReader.FixEmbeddedNames(info);   // i nomi dei font estratti dai PDF, anche per le analisi già salvate
+                result[pair[0]] = info;
             }
         }
         catch { /* archivio del browser non disponibile: si riparte da zero */ }

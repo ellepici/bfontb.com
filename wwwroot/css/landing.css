@@ -15,7 +15,7 @@ html.is-app .landing { display: none; }
 .landing-logo .dim { color: var(--muted); font-weight: 400; }
 .landing-open {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 10px 18px; border-radius: 2px;
+  padding: 10px 18px; border-radius: 7px;
   background: var(--ink); color: var(--paper); text-decoration: none; font-weight: 500;
 }
 .landing-open:hover { background: var(--proof); }

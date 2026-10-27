@@ -24,9 +24,9 @@
 .catalog-list .row .spec { align-self: center; line-height: var(--spec-lh); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: visible; overflow-wrap: break-word; }
 .catalog-list .row .spec.clamped { overflow: hidden; }
 
-.icon-btn { border: 1px solid var(--rule); background: transparent; color: var(--muted); width: 28px; height: 28px; border-radius: 2px; cursor: pointer; display: grid; place-items: center; font-size: 16px; line-height: 1; }
-.icon-btn:hover { color: var(--ink); border-color: var(--muted); }
-.icon-btn[aria-pressed=true] { color: var(--star); border-color: var(--star); }
+.icon-btn { border: 1px solid var(--sq-b, var(--sq-bc)); --sq-bc: var(--rule); background: transparent; color: var(--muted); width: 28px; height: 28px; border-radius: 5px; cursor: pointer; display: grid; place-items: center; font-size: 16px; line-height: 1; }
+.icon-btn:hover { color: var(--ink); --sq-bc: var(--muted); }
+.icon-btn[aria-pressed=true] { color: var(--star); --sq-bc: var(--star); }
 
 .cred { font-family: var(--f-ui); font-size: 12px; color: var(--ink); opacity: .8; }
 
@@ -80,7 +80,7 @@
 /* maniglie dello stile, ai lati del suo nome (nel catalogo) */
 .fcard .fc-bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; padding: 0 10px; box-sizing: border-box; }
 .fcard .fc-bar .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fcard .fc-step { flex: none; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 2px; background: none; color: var(--muted); cursor: pointer; transition: color .12s, background-color .12s; }
+.fcard .fc-step { flex: none; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--muted); cursor: pointer; transition: color .12s, background-color .12s; }
 .fcard .fc-step .ph { width: 14px; height: 14px; }
 /* in blu correttore solo sotto il puntatore */
 .fcard .fc-step:hover { color: var(--proof); background: var(--proof-soft); }

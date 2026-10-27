@@ -132,6 +132,7 @@ public static partial class OpenTypeReader
         info.DesignerUrl = G(12);
         info.License = G(13);
         info.LicenseUrl = G(14);
+        FixEmbeddedNames(info);
 
         var years = YearRe().Matches($"{info.Copyright} {info.Trademark}").Select(m => int.Parse(m.Value)).Order().ToList();
         if (years.Count > 0) info.Year = years[0] == years[^1] ? years[0].ToString() : $"{years[0]}–{years[^1]}";
@@ -154,6 +155,40 @@ public static partial class OpenTypeReader
     private static uint U32(byte[] d, int o) => BinaryPrimitives.ReadUInt32BigEndian(d.AsSpan(o, 4));
     private static string Tag(byte[] d, int o) => Encoding.ASCII.GetString(d, o, 4);
 
+    /// <summary>
+    /// I font estratti da un PDF hanno come nome di famiglia il nome PostScript con davanti il segno del sottoinsieme:
+    /// "ZOUTJY+Rubis-Black", "ZOUTJY+Rubis-BoldItalic"… così ogni peso sembrerebbe una famiglia a sé.
+    /// Qui si toglie il segno e si separa la famiglia ("Rubis") dallo stile ("Black", "Bold Italic").
+    /// Si applica anche ai dati già salvati nella cache dell'analisi (più volte non cambia niente).
+    /// </summary>
+    public static void FixEmbeddedNames(FontInfo info)
+    {
+        if (info.Family is not { } fam || !SubsetTagRe().IsMatch(fam)) return;
+        info.Subset = true;
+        // dentro i PDF le parentesi dei testi sono scritte con la barra davanti: "\(c\) 2015 by…" → "(c) 2015 by…"
+        static string? Unescape(string? s) => s?.Replace("\\(", "(").Replace("\\)", ")");
+        info.Copyright = Unescape(info.Copyright); info.Trademark = Unescape(info.Trademark);
+        info.Foundry = Unescape(info.Foundry); info.FoundryGuess = Unescape(info.FoundryGuess); info.Designer = Unescape(info.Designer);
+        fam = SubsetTagRe().Replace(fam, "");
+        if (info.Full is not null) info.Full = SubsetTagRe().Replace(info.Full, "");
+        int dash = fam.IndexOf('-');
+        if (!fam.Contains(' ') && dash > 0 && dash < fam.Length - 1)
+        {
+            string tail = fam[(dash + 1)..];
+            static string Squash(string? s) => new string((s ?? "").Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+            if (info.Sub is null || Squash(info.Sub) == Squash(tail) || Squash(info.Sub) == "regular")
+            {
+                var file = fam + ".otf";
+                info.Family = StyleNames.GuessFamily(file);   // "NeueHaas-Bold" → "Neue Haas"
+                info.Sub = StyleNames.StyleLabel(file);        // "BoldItalic" → "Bold Italic"
+                info.Full = $"{info.Family} {info.Sub}";
+                return;
+            }
+        }
+        info.Family = fam;
+    }
+
+    [GeneratedRegex(@"^[A-Z]{6}\+")] private static partial Regex SubsetTagRe();
     [GeneratedRegex(@"\b(1[89]\d{2}|20\d{2})\b")] private static partial Regex YearRe();
     [GeneratedRegex(@"(?:\(c\)|©|copyright)\s*(?:\d{4}(?:\s*[-–,]\s*\d{4})*)?\s*(?:by\s+)?([^.;,\n]{2,60})", RegexOptions.IgnoreCase)] private static partial Regex CopyrightOwnerRe();
     [GeneratedRegex(@"^(for|of|the|by) ", RegexOptions.IgnoreCase)] private static partial Regex NotAnOwnerRe();

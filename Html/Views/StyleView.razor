@@ -18,6 +18,10 @@ else
                 </div>
             </div>
             <div class="sub">@PathLine(style)</div>
+            @if (style.Info?.Subset == true)
+            {
+                <p class="sv-note"><Icon Name="warning-circle" /> Partial copy: this file was taken from a PDF or a website and holds only the characters used there.</p>
+            }
             @if (showCredits)
             {
                 @* pannello dei crediti di questo file: resta aperto passando da uno stile all'altro, per confrontarli *@

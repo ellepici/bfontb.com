@@ -70,10 +70,10 @@ header {
 .menu-theme .seg button .ph { width: 14px; height: 14px; }
 .menu-k { font-family: var(--f-data); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 6px 10px 2px; }
 
-.btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); padding: 7px 14px; border-radius: 2px; cursor: pointer; font-weight: 500; }
-.btn.ghost { background: transparent; color: var(--ink); border-color: var(--rule); }
-.btn.ghost:hover { opacity: 1; border-color: var(--ink); }
-.btn.ghost[aria-pressed=true] { border-color: var(--ink); background: var(--sheet); }   /* Settings: la pagina aperta */
+.btn { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--sq-b, var(--sq-bc)); --sq-bc: var(--ink); background: var(--ink); color: var(--paper); padding: 7px 14px; border-radius: 6px; cursor: pointer; font-weight: 500; }
+.btn.ghost { background: transparent; color: var(--ink); --sq-bc: var(--rule); }
+.btn.ghost:hover { opacity: 1; --sq-bc: var(--ink); }
+.btn.ghost[aria-pressed=true] { --sq-bc: var(--ink); background: var(--sheet); }   /* Settings: la pagina aperta */
 .btn.sm { padding: 4px 10px; font-size: 12px; }
 .btn:hover { opacity: .88; }
 .btn[disabled] { opacity: .5; cursor: default; }
@@ -81,10 +81,10 @@ header {
 /* Testo di prova: un riquadro solo, a sinistra la tendina dei testi pronti, a destra il campo in cui scrivere */
 .sample-box {
   flex: 1 1 280px; min-width: 220px; display: flex; align-items: stretch;
-  border: 1px solid var(--rule); background: var(--sheet); border-radius: 2px;
+  border: 1px solid var(--sq-bc); --sq-bc: var(--rule); background: var(--sheet); border-radius: 6px;
 }
-.sample-box:hover { border-color: var(--muted); }
-.sample-box:focus-within { border-color: var(--proof); outline: 1px solid var(--proof); outline-offset: -2px; }
+.sample-box:hover { --sq-bc: var(--muted); }
+.sample-box:focus-within { --sq-bc: var(--proof); outline: 1px solid var(--proof); outline-offset: -2px; }
 .sample-input { flex: 1 1 auto; min-width: 0; border: 0; background: transparent; padding: 8px 10px; outline: none; }
 .sample-input:focus-visible { outline: none; }
 .dd.in-box { display: flex; flex: none; }
@@ -101,9 +101,9 @@ header {
   display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; max-width: 100%;
   height: 30px; padding: 0 9px 0 10px; box-sizing: border-box;
   font: 500 13px/1.2 var(--f-data); font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: none; text-align: left;
-  color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 2px; cursor: pointer;
+  color: var(--ink); background: var(--sheet); border: 1px solid var(--sq-b, var(--sq-bc)); --sq-bc: var(--rule); border-radius: 6px; cursor: pointer;
 }
-.dd-btn:hover:not(:disabled), .dd.open .dd-btn { border-color: var(--ink); }
+.dd-btn:hover:not(:disabled), .dd.open .dd-btn { --sq-bc: var(--ink); }
 .dd-btn:disabled { opacity: .6; cursor: default; }
 .dd-val { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dd-caret { width: 12px; height: 12px; color: var(--muted); transition: transform .15s ease; }
@@ -129,10 +129,10 @@ header {
 /* modificabile: il campo ha l'aspetto del pulsante, con dentro il testo da scrivere, l'unità e la freccia */
 .dd-field {
   display: inline-flex; align-items: center; height: 30px; box-sizing: border-box; padding-left: 10px;
-  background: var(--sheet); border: 1px solid var(--rule); border-radius: 2px; cursor: text;
+  background: var(--sheet); border: 1px solid var(--sq-b, var(--sq-bc)); --sq-bc: var(--rule); border-radius: 6px; cursor: text;
 }
-.dd-field:hover, .dd.open .dd-field { border-color: var(--ink); }
-.dd-field:focus-within { border-color: var(--proof); outline: 1px solid var(--proof); outline-offset: -2px; }
+.dd-field:hover, .dd.open .dd-field { --sq-bc: var(--ink); }
+.dd-field:focus-within { --sq-bc: var(--proof); outline: 1px solid var(--proof); outline-offset: -2px; }
 .dd-input {
   border: 0; padding: 0; margin: 0; background: transparent; min-width: 0;
   font: 500 13px/1.2 var(--f-data); font-variant-numeric: tabular-nums; color: var(--ink);
@@ -147,11 +147,11 @@ header {
 /* Interruttore accanto a una tendina (Italic): stesso aspetto del pulsante della tendina; acceso, in blu correttore */
 .tog-btn {
   display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 8px; box-sizing: border-box;
-  font: 500 13px/1.2 var(--f-data); color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 2px; cursor: pointer;
+  font: 500 13px/1.2 var(--f-data); color: var(--ink); background: var(--sheet); border: 1px solid var(--sq-b, var(--sq-bc)); --sq-bc: var(--rule); border-radius: 6px; cursor: pointer;
 }
 .tog-btn .ph { width: 14px; height: 14px; color: var(--muted); }
-.tog-btn:hover { border-color: var(--ink); }
-.tog-btn[aria-pressed=true] { background: var(--proof-soft); color: var(--proof); border-color: var(--proof); }
+.tog-btn:hover { --sq-bc: var(--ink); }
+.tog-btn[aria-pressed=true] { background: var(--proof-soft); color: var(--proof); --sq-bc: var(--proof); }
 .tog-btn[aria-pressed=true] .ph { color: var(--proof); }
 /* "sm": nell'intestazione delle righe del catalogo, accanto al nome */
 .dd.sm .dd-btn { height: 24px; padding: 0 7px 0 8px; gap: 8px; font: 500 12px/1.2 var(--f-ui); max-width: 220px; }
@@ -163,7 +163,7 @@ header {
 .chip { border: 1px solid var(--rule); background: transparent; padding: 4px 10px; border-radius: 999px; cursor: pointer; font-size: 12px; color: inherit; text-decoration: none; }
 .chip[aria-pressed=true] { background: var(--proof-soft); border-color: var(--proof); color: var(--proof); }
 
-.tab { border: 0; background: transparent; padding: 5px 12px; cursor: pointer; border-radius: 1px; font-size: 13px; }
+.tab { border: 0; background: transparent; padding: 5px 12px; cursor: pointer; border-radius: 5px; font-size: 13px; }
 .tab[aria-selected=true] { background: var(--ink); color: var(--paper); }
 
 /* Colonna di sinistra: ricerca e filtri restano fermi, scorre solo l'elenco dei nomi */
@@ -226,15 +226,15 @@ button.crumb { cursor: pointer; color: var(--proof); text-decoration: underline;
 button.crumb:hover { text-decoration-color: currentColor; }
 .crumb.here { color: var(--ink); font-weight: 600; }
 /* nelle impostazioni, al posto del percorso */
-.crumbs .back { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px 0 10px; margin-right: 12px; border: 1px solid var(--rule); border-radius: 2px; background: var(--sheet); color: var(--ink); font: 500 13px/1 var(--f-ui); cursor: pointer; }
-.crumbs .back:hover { border-color: var(--ink); }
+.crumbs .back { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px 0 10px; margin-right: 12px; border: 1px solid var(--sq-b, var(--sq-bc)); --sq-bc: var(--rule); border-radius: 6px; background: var(--sheet); color: var(--ink); font: 500 13px/1 var(--f-ui); cursor: pointer; }
+.crumbs .back:hover { --sq-bc: var(--ink); }
 .crumbs .back .ph { width: 14px; height: 14px; }
-.seg, .layout-switch { display: flex; gap: 2px; border: 1px solid var(--rule); border-radius: 6px; padding: 2px; flex: none; }
-.seg button { border: 0; background: transparent; width: 30px; height: 26px; border-radius: 4px; cursor: pointer; display: grid; place-items: center; color: var(--muted); font-size: 16px; }
+.seg, .layout-switch { display: flex; gap: 2px; border: 1px solid var(--sq-b, var(--sq-bc)); --sq-bc: var(--rule); border-radius: 6px; padding: 2px; flex: none; }
+.seg button { border: 0; background: transparent; width: 30px; height: 26px; border-radius: 5px; cursor: pointer; display: grid; place-items: center; color: var(--muted); font-size: 16px; }
 .seg button:hover { color: var(--ink); }
 .seg button[aria-pressed=true] { background: var(--ink); color: var(--paper); }
-.layout-switch { margin-left: auto; display: flex; gap: 2px; border: 1px solid var(--rule); border-radius: 6px; padding: 2px; flex: none; }
-.layout-switch button { border: 0; background: transparent; width: 30px; height: 24px; border-radius: 4px; cursor: pointer; display: grid; place-items: center; color: var(--muted); }
+.layout-switch { margin-left: auto; display: flex; gap: 2px; border: 1px solid var(--sq-b, var(--sq-bc)); --sq-bc: var(--rule); border-radius: 6px; padding: 2px; flex: none; }
+.layout-switch button { border: 0; background: transparent; width: 30px; height: 24px; border-radius: 5px; cursor: pointer; display: grid; place-items: center; color: var(--muted); }
 .layout-switch button[aria-pressed=true] { background: var(--ink); color: var(--paper); }
 .layout-switch .ph { width: 16px; height: 16px; }
 /* numeri animati (NumberFlow): stesse cifre tabellari del testo intorno, sfumatura sopra e sotto ridotta per la barra bassa */
@@ -273,7 +273,9 @@ number-flow.nf { font-variant-numeric: tabular-nums; --number-flow-mask-height: 
 
 /* Tendina dei colori (ColorMenu): un campione «Aa» con i colori scelti; nel riquadro coppie pronte, tavolozze, codici */
 .cm-btn { gap: 6px; padding-left: 4px; }
-.cm-sw { display: inline-grid; place-items: center; width: 26px; height: 20px; border-radius: 2px; border: 1px solid var(--rule); font: 600 11px/1 var(--f-ui); flex: none; }
+.cm-sw { display: inline-grid; place-items: center; width: 26px; height: 20px; border-radius: 3px; border: 1px solid var(--sq-b, var(--sq-bc)); --sq-bc: var(--rule); font: 600 11px/1 var(--f-ui); flex: none; }
+/* nel bottone il campione è senza bordo: conta solo il colore (stessa misura, 28×22, compensando il bordo tolto) */
+.cm-btn .cm-sw { border: 0; --sq-bc: transparent; --sq-w: 0px; width: 28px; height: 22px; }
 .cm-pop {
   position: absolute; z-index: 30; top: calc(100% + 4px); right: 0; width: 300px; box-sizing: border-box;
   padding: 10px; display: flex; flex-direction: column; gap: 8px;

@@ -53,6 +53,10 @@ public sealed class FontInfo
     /// <summary>Il file non si apre (danneggiato o formato non supportato).</summary>
     public bool Error { get; set; }
 
+    /// <summary>Copia parziale estratta da un PDF (o salvata da un sito): ha solo i caratteri usati lì.
+    /// Si riconosce dal prefisso di sei maiuscole e un più nel nome, "ZOUTJY+Rubis-Black".</summary>
+    public bool Subset { get; set; }
+
     /// <summary>Versione ridotta salvata nella cache dell'analisi (testi lunghi tagliati).</summary>
     public bool Slim { get; set; }
 
@@ -66,7 +70,7 @@ public sealed class FontInfo
             Family = Family, Sub = Sub, Full = Full, Version = Version, Foundry = Foundry, FoundryGuess = FoundryGuess,
             Designer = Designer, VendorUrl = VendorUrl, DesignerUrl = DesignerUrl, LicenseUrl = LicenseUrl, Year = Year,
             WeightClass = WeightClass, WidthClass = WidthClass, Glyphs = Glyphs, Vendor = Vendor, FsSelection = FsSelection,
-            Note = Note, Error = Error, Slim = true,
+            Note = Note, Error = Error, Slim = true, Subset = Subset,
             FamilyClass = FamilyClass, PanoseFamily = PanoseFamily, PanoseSerif = PanoseSerif, PanoseProportion = PanoseProportion,
             FixedPitch = FixedPitch, IsVariable = IsVariable, ShapeSerif = ShapeSerif, Schema = Schema,
             Copyright = Cut(Copyright, 400), Trademark = Cut(Trademark, 300), License = Cut(License, 400),
