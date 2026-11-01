@@ -86,6 +86,9 @@ public partial class SettingsView
         3.2 Use the file and folder names only to confirm, or for fonts that can't be read.
         3.3 Clean the names before using them:
             - Fonts extracted from PDFs have six capitals and a plus in front, and the PostScript name as their family: "ZOUTJY+Rubis-BoldItalic" → family "Rubis", style "Bold Italic". Remove the prefix and split family and style.
+            - The style name inside a font is sometimes wrong. Older fonts often say "Regular" (ID 2) even when they are Bold, Medium or ExtraBold, and put the real style elsewhere: in the full name (ID 4, "AmericanaEF-Bold"), in the PostScript name (ID 6), or in the family name itself (ID 1 "Amplitude-Bold" with style "Regular"). Decide the weight from all the witnesses together: style name, full and PostScript names, the family name inside the font, usWeightClass and the file name. When the style says only Regular, Roman or Italic and at least two of the others agree on another weight, that weight wins: "AmericanaEF-Bold", usWeightClass 700, file "Americana-Bold.ttf" → Bold, not Regular. A style name that already says a weight (Heavy, Black, Ultra Expanded Bold) stays as it is.
+            - usWeightClass is a witness, not the truth: some families write 400 for every weight, or 500 for all of them, and some put 400 in their Black. Never let it alone override a style name.
+            - Some words look like weights but belong to the family name: "Book" in "AG Book", "Super" in "GT Super Display", "Black" in "Archivo Black" when Archivo Black is sold as its own family. If the file name also says Regular, it is the Regular of that family.
             - Drop licensing and packaging words that aren't part of the name: Std, Pro, LT, MT, BT, Unlicensed, Trial, Demo, Test, Webfont, OTF, TTF, Desktop. (Remember Trial or Demo for the file name, rule 5.)
             - Foundries sometimes misspell their own fonts ("ABC Asflat" inside an ABC Asfalt file) or use accents inconsistently ("Landnáma"/"Landnama"): use the spelling the foundry uses on its website and in the rest of the family.
             - Translate localised style names into English: Kursiv → Italic, Fett → Bold, Halbfett → SemiBold, Buch → Book, Mager → Light, Leicht → Light, Mittel → Medium, Schmal → Condensed, Breit → Extended. When a whole family has a German name and an official English one (AG Buch BQ → AG Book), use the English one and tell me.
@@ -105,7 +108,7 @@ public partial class SettingsView
         ━━ 5. FILE NAMES
         5.1 Rename every font file as <Family>-<Weight>[-Italic][-Trial].<ext>, built from the names inside the font:
             - <Family> = the full name of the variant without spaces, keeping its capitals: "ABC Marfa" → "ABCMarfa", "ABC Marfa Mono" → "ABCMarfaMono", "ABC Asfalt Condensed" → "ABCAsfaltCondensed". Letters and digits only, no accents (ä → a, é → e).
-            - <Weight> = one CamelCase word: Hairline, Thin, ExtraLight, Light, Book, Regular, Medium, SemiBold, Bold, ExtraBold, Black, Heavy. Keep the font's own word when it has one (Roman, Fat, Poster, a number like 40 or 65), translated into English (rule 3.3). If the style names are missing or contradictory, use usWeightClass: 100 Thin, 200 ExtraLight, 300 Light, 400 Regular, 500 Medium, 600 SemiBold, 700 Bold, 800 ExtraBold, 900 Black.
+            - <Weight> = one CamelCase word: Hairline, Thin, ExtraLight, Light, Book, Regular, Medium, SemiBold, Bold, ExtraBold, Black, Heavy. Keep the font's own word when it has one (Roman, Fat, Poster, a number like 40 or 65), translated into English (rule 3.3). If the style names are wrong or contradictory, follow rule 3.3; if they are missing altogether, use usWeightClass: 100 Thin, 200 ExtraLight, 300 Light, 400 Regular, 500 Medium, 600 SemiBold, 700 Bold, 800 ExtraBold, 900 Black.
             - "-Italic" only for italics ("-Oblique" if the font calls it so), always after the weight: "Agipo-Regular-Italic.otf", "Agipo-Bold-Italic.otf".
             - Other style words that are not the weight stay after it, in CamelCase: "AGBook-Bold-Outline.otf", "Haarlem-Regular-SmallCaps.otf".
             - Variable fonts: "<Family>-Variable[-Italic]", e.g. "ABCMarfa-Variable.ttf", "ABCMarfa-Variable-Italic.ttf".
@@ -117,7 +120,7 @@ public partial class SettingsView
         5.5 Web fonts follow the same rule inside Web/: "ABCMarfa-Bold.woff2".
 
         ━━ 6. DUPLICATES
-        6.1 Duplicates are: byte-identical files; copies like "Regular (2).otf" or "Regular copy.otf"; the same font in .otf and .ttf; the same font in two folders.
+        6.1 Duplicates are: byte-identical files; copies like "Regular (2).otf" or "Regular copy.otf"; the same font in .otf and .ttf; the same font in two folders. Compare the corrected style (rule 3.3), not the raw name: "Americana-Bold.ttf" (style "Regular" inside) and "Americana-Bold.otf" (style "Bold") are the same Bold in two formats.
         6.2 Keep one in place: the .otf over the .ttf, then the most recent version (name ID 5), then the complete one over a partial copy. Move the others into _duplicates/, keeping their original relative path.
         6.3 Two files with the same name but a different version or a different number of glyphs are not duplicates: keep both, add the version to the name of the older one, and tell me.
 
@@ -133,7 +136,7 @@ public partial class SettingsView
             - how many files, families and variants, before and after;
             - how many files would move, be renamed, go into _duplicates/ or Extra/;
             - ten examples of old → new names;
-            - the families you renamed and why (typos, German names, foundry prefixes), the fonts in the wrong folder, the partial copies, the meaningless names, the files you couldn't read, and every case that needs my decision.
+            - the families you renamed and why (typos, German names, foundry prefixes), the fonts whose style you corrected because the name inside the font was wrong (rule 3.3, with the evidence), the fonts in the wrong folder, the partial copies, the meaningless names, the files you couldn't read, and every case that needs my decision.
         8.4 After my OK, carry out the plan exactly and write _organise_log/moves.csv (old path, new path) as you go, plus a script _organise_log/undo that moves everything back.
         8.5 At the end, check that every file is still there (same count as at the start), that no two files share a name in the same folder and that no font is left loose at the top. Write _organise_log/report.md and tell me: families, variants and fonts after the change, what went wrong, and what is left for me to decide.
         """;

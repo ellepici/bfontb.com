@@ -107,7 +107,7 @@ details.card summary { cursor: pointer; font-weight: 600; }
 .fb-form input[type=text], .fb-form input[type=email], .fb-form textarea {
   font: 15px/1.45 var(--f-ui); color: var(--ink); background: var(--sheet); border: 1px solid var(--rule); border-radius: 2px; padding: 9px 11px; resize: vertical;
 }
-.fb-form input:hover, .fb-form textarea:hover { border-color: var(--muted); }
+.fb-form input:hover, .fb-form textarea:hover { border-color: var(--proof); }
 .fb-form label.fb-check { flex-direction: row; align-items: baseline; gap: 10px; }
 .fb-form label.fb-check > span { font-family: var(--f-ui); font-size: 13.5px; letter-spacing: 0; text-transform: none; color: var(--ink); }
 .fb-form label.fb-check em { font-style: normal; color: var(--muted); margin-left: 0; }

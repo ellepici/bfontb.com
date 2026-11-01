@@ -18,6 +18,13 @@ public abstract class LazyFont : ComponentBase, IAsyncDisposable
     /// <summary>Lo stile da caricare.</summary>
     protected abstract FontStyle LazyStyle { get; }
 
+    /// <summary>
+    /// Altri stili da leggere in sottofondo, dopo questo, con la precedenza più bassa: i variabili delle sue scelte
+    /// di cui non si sa ancora se hanno il corsivo dentro (così la tendina può offrire "… Italic" anche per loro).
+    /// </summary>
+    [Parameter] public IReadOnlyList<FontStyle>? Prefetch { get; set; }
+    private readonly HashSet<int> prefetched = [];
+
     /// <summary>L'elemento che contiene il testo nel font (quello osservato).</summary>
     protected ElementReference specEl;
 
@@ -39,6 +46,9 @@ public abstract class LazyFont : ComponentBase, IAsyncDisposable
     {
         // Con Virtualize lo stesso componente può ricevere uno stile diverso: lo stile vecchio esce dalla coda e si osserva di nuovo.
         var style = LazyStyle;
+        if (Prefetch is { Count: > 0 } more && style.Status == LoadStatus.Ready)
+            foreach (var s in more)
+                if (prefetched.Add(s.Id)) _ = Loader.EnsureAsync(s, FontLoader.Near);
         if (ReferenceEquals(observed, style)) return;
         if (observed is not null) Loader.Drop(observed);
         observed = style;

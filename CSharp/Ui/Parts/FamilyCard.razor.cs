@@ -19,6 +19,12 @@ public partial class FamilyCard
     /// <summary>Corpo di «Aa», in pixel (dipende dalla grandezza delle schede).</summary>
     [Parameter] public double AaSize { get; set; } = 60;
 
+    /// <summary>
+    /// In alternativa ad AaSize: il corpo come frazione della larghezza della scheda (0.3 = 30%), per le griglie che si
+    /// dividono da sole in colonne (pagina della famiglia) e di cui il C# non conosce la misura.
+    /// </summary>
+    [Parameter] public double? AaShare { get; set; }
+
     [Parameter] public bool Current { get; set; }
 
     /// <summary>Scheda di uno stile: sotto c'è il nome dello stile e il clic apre la sua pagina (tutti i caratteri).</summary>
@@ -36,11 +42,18 @@ public partial class FamilyCard
     /// <summary>Scelto un altro stile con le maniglie o con le frecce (il suo percorso).</summary>
     [Parameter] public EventCallback<string> OnStyle { get; set; }
 
+    /// <summary>Nel catalogo: un variabile con il corsivo dentro (slnt/ital) si mostra inclinato (scelto, o con Italic acceso).</summary>
+    [Parameter] public bool Slant { get; set; }
+
+    // la scelta attuale (il percorso, più il segno del corsivo se il variabile è inclinato) e il suo nome
+    private string PickValue => Style.Path + (Slant && Style.SlantsToItalic ? FontStyle.ItalicMark : "");
+    private string PickLabel => StyleOptions?.FirstOrDefault(o => o.Value == PickValue)?.Label ?? Style.Label;
+
     /// <summary>Lo stile prima o dopo quello mostrato (si ricomincia dall'altro capo).</summary>
     private Task Step(int d)
     {
         if (StyleOptions is not { Count: > 1 } list) return Task.CompletedTask;
-        int i = Math.Max(0, list.ToList().FindIndex(o => o.Value == Style.Path));
+        int i = Math.Max(0, list.ToList().FindIndex(o => o.Value == PickValue));
         return OnStyle.InvokeAsync(list[(i + d + list.Count) % list.Count].Value);
     }
 
@@ -54,14 +67,24 @@ public partial class FamilyCard
     }
 
     private string TitleText => OpensStyle
-        ? $"Open the style page: {Style.Label} · {Style.FileName}"
-        : $"{Title ?? Family.Name} — {Style.Label} · {Style.FileName}{(StyleOptions is { Count: > 1 } ? $" · {Note}" : "")}";
+        ? $"Open the style page: {Style.Label}{FormatPart}"
+        : $"{Title ?? Family.Name} — {Style.Label}{FormatPart}{(StyleOptions is { Count: > 1 } ? $" · {Note}" : "")}";
+
+    // il formato del file (OTF, TTF…) al posto del suo nome
+    private string FormatPart => Style.Format.Length > 0 ? $" · {Style.Format}" : "";
 
     protected override FontStyle LazyStyle => Style;
 
     private string AaStyle => Style.Status == LoadStatus.Error
         ? ""
-        : $"{Style.Css};font-size:{AaSize.ToString("0.#", CultureInfo.InvariantCulture)}px";
+        : $"{Style.Css};font-size:" + (AaShare is double k ? $"{(k * 100).ToString("0.##", CultureInfo.InvariantCulture)}cqi" : $"{AaSize.ToString("0.#", CultureInfo.InvariantCulture)}px") + AnimVars;
+
+    // i font variabili: «Aa» passa dal peso più sottile al più spesso e torna indietro, come nelle righe
+    private bool CanAnimate => Style.Status == LoadStatus.Ready && Style.Info is { WghtMin: not null, WghtMax: not null } i && i.WghtMax > i.WghtMin;
+    private string AaClass => CanAnimate ? $"aa {LoadClass} vf-anim" : $"aa {LoadClass}";
+    private string AnimVars => (CanAnimate
+        ? $";--wmin:{Style.Info!.WghtMin!.Value.ToString(CultureInfo.InvariantCulture)};--wmax:{Style.Info.WghtMax!.Value.ToString(CultureInfo.InvariantCulture)}"
+        : "") + (Slant && Style.Status == LoadStatus.Ready && Style.ItalicVariation is { } v ? $";font-variation-settings:{v};--vfx:, {v}" : "");
 
     private void Open()
     {

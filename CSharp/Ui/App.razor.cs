@@ -23,8 +23,8 @@ public partial class App : IDisposable
     /// <summary>Un filtro per caratteristica, con il numero di famiglie che la hanno tra quelle cercate.</summary>
     private sealed record TraitChip(FontTrait Trait, string Label, int Count, bool Active);
     private List<TraitChip> TraitChips = [];
+    private int WebCount;   // famiglie con font web (con ricerca e filtri attivi): il numero accanto a "Web"
 
-    /// <summary>Le tre scelte dell'aspetto, con le icone Phosphor.</summary>
     private string SampleBoxValue => Lib.SampleText == FontLibrary.NameToken ? "" : Lib.SampleText;
 
     protected override async Task OnInitializedAsync()
@@ -72,19 +72,16 @@ public partial class App : IDisposable
     /// Indietro e Avanti del browser funzionano (filtri, ricerca e dimensioni non cambiano l'indirizzo).
     /// </summary>
     /// <summary>
-    /// Aperta una famiglia da fuori dell'indice (catalogo, percorso, Indietro…): l'indice a sinistra scorre finché
-    /// la famiglia è in cima, così si vedono anche le sue varianti. Se la si è scelta nell'indice, l'indice resta fermo.
+    /// Aperta una famiglia (dall'indice a sinistra, dal catalogo, dal percorso, con Indietro…): l'indice scorre finché
+    /// la famiglia è in cima, così sotto si vedono le sue varianti.
     /// </summary>
     private string? revealedFamily;
-    private bool pickedInIndex;
     private async Task RevealFamilyAsync()
     {
         var current = Lib.View is View.Family or View.Style && !Lib.IsDemo ? Lib.CurrentFamily : null;
         if (current == revealedFamily) return;
         revealedFamily = current;
-        bool fromIndex = pickedInIndex;
-        pickedInIndex = false;
-        if (current is not null && !fromIndex) await Bridge.RevealFamilyAsync();
+        if (current is not null) await Bridge.RevealFamilyAsync();
     }
 
     private string? shownTitle;
@@ -122,14 +119,15 @@ public partial class App : IDisposable
         }
         IndexRows = rows;
 
-        // conteggi calcolati sulle famiglie che rispondono anche agli altri filtri attivi
-        var searched = Lib.SearchedFamilies().Select(f => f.Traits()).ToList();
+        // conteggi calcolati sulle famiglie che rispondono anche agli altri filtri attivi, compreso Italic (solo quelle con corsivi)
+        var searched = Lib.SearchedFamilies().Where(Lib.MatchesItalic).Select(f => f.Traits()).ToList();
         TraitChips = FontClassifier.All.Where(a => a.Trait != FontTrait.Symbol).Select(a =>   // "Symbols" non è fra i filtri
         {
             var need = Lib.Filters | a.Trait;
             int count = searched.Count(t => (t & need) == need);
             return new TraitChip(a.Trait, a.Label, count, Lib.Filters.HasFlag(a.Trait));
         }).ToList();
+        WebCount = Lib.WebFamilyCount();
     }
 
     private static string LetterOf(string name)
@@ -149,9 +147,10 @@ public partial class App : IDisposable
     private List<(string Name, int Count)> OpenVariants(TypeFamily f)
     {
         if (Lib.View is not (View.Family or View.Style) || Lib.CurrentFamily != f.Name) return [];
-        var names = f.VariantNames(Lib.IncludeWeb).ToList();
-        if (names.Count == 0 || (names.Count == 1 && names[0] == f.Name)) return [];
-        return names.Select(v => (v, f.Variants[v].Count)).ToList();
+        // con un filtro o con Italic: solo le varianti che hanno stili che rispondono, con il loro numero
+        var list = f.VariantNames(false).Select(v => (v, Lib.ShownStyles(f, v).Count())).Where(x => x.Item2 > 0).ToList();
+        if (list.Count == 0 || (list.Count == 1 && list[0].v == f.Name)) return [];
+        return list;
     }
 
     private string IsCurrentVariant(TypeFamily f, string variant) =>
@@ -163,7 +162,6 @@ public partial class App : IDisposable
     /// </summary>
     private void OpenVariant(TypeFamily f, string variant)
     {
-        pickedInIndex = true;
         if (Lib.View == View.Style) { Lib.OpenVariant(f, variant, Lib.CurrentStyle?.Style); return; }
         if (!f.Variants.TryGetValue(variant, out var list) || list.Count == 0) return;
         var lightest = list.OrderBy(s => s.Weight).ThenBy(s => s.Italic).ThenBy(s => s.FileName, StringComparer.Ordinal).First();
@@ -176,7 +174,6 @@ public partial class App : IDisposable
     /// </summary>
     private void PickFamily(TypeFamily f)
     {
-        pickedInIndex = true;
         if (Lib.View == View.Family && Lib.CurrentFamily == f.Name) Lib.ShowCatalog();
         else Lib.OpenFamily(f.Name);
     }
@@ -188,18 +185,13 @@ public partial class App : IDisposable
     private void ToggleMenu() => menuOpen = !menuOpen;
     private void CloseMenu() => menuOpen = false;
 
-    /// <summary>"Change folder" è un'etichetta del campo file: il menu si chiude subito dopo, quando il browser ha già aperto la scelta.</summary>
-    private async Task CloseMenuSoon()
-    {
-        await Task.Delay(50);
-        menuOpen = false;
-    }
 
     // ---- crediti, segnalazioni e suggerimenti (dal menu): pagine come le impostazioni ----
     private void MenuPage(View page) { menuOpen = false; Lib.OpenPage(page); }
     private void MenuFeedback(FeedbackKind kind) { menuOpen = false; Lib.OpenFeedback(kind); }
     private bool IsFeedback(FeedbackKind kind) => Lib.View == View.Feedback && Lib.Feedback == kind;
 
+    /// <summary>Le due scelte dell'aspetto, con le icone Carbon.</summary>
     private static readonly (string Value, string Icon, string Label)[] Themes =
     [
         ("light", "sun", "Light"),
@@ -255,12 +247,29 @@ public partial class App : IDisposable
     }
 
     /// <summary>I colori scelti per i testi di prova, per il CSS (vedi .app.tinted in specimens.css e style-page.css).</summary>
+    // "tinted": c'è un colore scelto in Colors; "papered": c'è anche lo sfondo (solo allora i campioni hanno un riquadro colorato)
+    private string AppClass => Lib.InkColor is null && Lib.PaperColor is null ? "app" : Lib.PaperColor is null ? "app tinted" : "app tinted papered";
+
     private string? ColorVars =>
         (Lib.InkColor is { } ink ? $"--spec-ink:{ink};" : "") + (Lib.PaperColor is { } paper ? $"--spec-paper:{paper};" : "") is { Length: > 0 } v ? v : null;
 
     private Task OnSize(string v) => int.TryParse(v, out var s) ? Lib.SetSizeAsync(s) : Task.CompletedTask;
 
     private static readonly DropdownOption[] WeightOptions = FontLibrary.Weights.Select(w => new DropdownOption(w.Value.ToString(), w.Name, w.Value.ToString())).ToArray();
+    /// <summary>
+    /// Nella pagina di uno stile spessore, corsivo e corpo non cambiano nulla: lo stile è quello scelto,
+    /// e caratteri e scala dei corpi hanno misure loro. I comandi restano visibili ma spenti.
+    /// </summary>
+    private bool StyleOff => Lib.View == View.Style;
+
+    /// <summary>La spaziatura conta solo nella prova dello stile, non nella tabella dei caratteri.</summary>
+    private bool TrackOff => StyleOff && Lib.StyleGlyphsTab;
+
+    /// <summary>Filtro Variable acceso (lo spessore dei variabili si anima da solo) o pagina di uno stile: la tendina dello spessore si spegne.</summary>
+    private bool WeightOff => Lib.Filters.HasFlag(FontTrait.Variable) || StyleOff;
+
+    private string WeightTitle => StyleOff ? "Weight: not used on the style page" : WeightOff ? "Weight: variable fonts animate it on their own" : "Weight";
+
     private Task OnWeight(string v) => int.TryParse(v, out var w) ? Lib.SetWeightAsync(w) : Task.CompletedTask;
 
     /// <summary>−50, 0, +25: il segno dice subito se le lettere si stringono o si allargano.</summary>
@@ -271,10 +280,7 @@ public partial class App : IDisposable
         if (int.TryParse(v, out var t)) _ = Lib.SetTrackingAsync(t);
     }
 
-    private void OnWebToggle(ChangeEventArgs e)
-    {
-        _ = Lib.SetIncludeWebAsync(e.Value is true);
-    }
+    private Task ToggleWeb() => Lib.SetWebOnlyAsync(!Lib.WebOnly);
 
     private async Task OnQueryInput(ChangeEventArgs e)
     {

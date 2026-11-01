@@ -13,19 +13,31 @@
         @if (StyleOptions is { Count: > 0 })
         {
             @* lo spessore (lo stile) da mostrare, scelto qui senza entrare nella famiglia *@
-            <Dropdown Class="sm" Options="StyleOptions" Value="@Style.Path" Disabled="@(StyleOptions.Count < 2)" OnChange="OnStyle" />
+            <Dropdown Class="sm" Options="StyleOptions" Value="@PickValue" Disabled="@(StyleOptions.Count < 2)" OnChange="OnStyle" />
         }
         <span class="meta-rest">
             @if (Extra is not null)
             {
-                <span>@Extra</span>
+                <span>@ExtraText</span>
             }
-            <span class="cred">@Style.Info?.CreditLine()</span>
-            <span>@Style.FileName</span>
+            @if (Style.Info?.CreditLine(!HideAuthor, !HideYear) is { Length: > 0 } credit)
+            {
+                <span class="cred">@credit</span>
+            }
+            @* del file si mostra solo il formato; il nome intero resta nel suggerimento al passaggio del mouse *@
+            @if (Style.Format.Length > 0)
+            {
+                <span class="fmt" title="@Style.FileName">@Style.Format</span>
+            }
         </span>
     </div>
     <div class="acts">
-        <button class="icon-btn" aria-pressed="@PinnedAttr" title="Add to comparison" aria-label="Add to comparison" @onclick="() => Lib.TogglePinAsync(Style)"><Icon Name="@(PinnedAttr == "true" ? "star-fill" : "star")" /></button>
+        @if (CanAnimate)
+        {
+            @* font variabile: il testo passa dal peso più sottile al più spesso e torna indietro, finché non lo si ferma *@
+            <button class="icon-btn" title="@(paused ? "Play the weight animation" : "Pause the weight animation")"
+                    aria-label="@(paused ? "Play the weight animation" : "Pause the weight animation")" @onclick="() => paused = !paused"><Icon Name="@(paused ? "play" : "pause")" /></button>
+        }
     </div>
-    <div class="spec @SpecClass" style="@SpecStyle" title="Open the style page: all characters, proof and credits" @ref="specEl" @onclick="Open">@SpecText</div>
+    <div class="@($"spec {SpecClass}{AnimClass}")" style="@(SpecStyle + AnimStyle)" title="Open the style page: all characters, proof and credits" @ref="specEl" @onclick="Open">@SpecText</div>
 </div>

@@ -35,6 +35,13 @@ public sealed class BrowserBridge(IJSRuntime js) : IAsyncDisposable
     public async Task<byte[]> ReadBytesAsync(int fileId) =>
         await (await Module).InvokeAsync<byte[]>("readBytes", fileId);
 
+    /// <summary>Il valore di un colore del tema (es. "--ink"), come lo calcola il browser: "#16171A".</summary>
+    public async Task<string?> CssColorAsync(string variable) => await (await Module).InvokeAsync<string?>("cssColor", variable);
+
+    /// <summary>Le barre HSL di ColorMenu: le disegna nel riquadro e manda il colore scelto a OnWheel.</summary>
+    public async Task ColorWheelAsync<T>(ElementReference el, DotNetObjectReference<T> target, string hex, bool isInk) where T : class =>
+        await (await Module).InvokeVoidAsync("colorWheel", el, target, hex, isInk);
+
     public async Task ObserveAsync<T>(ElementReference el, DotNetObjectReference<T> target) where T : class =>
         await (await Module).InvokeVoidAsync("observe", el, target);
 

@@ -40,6 +40,29 @@ public sealed class FontInfo
     public bool FixedPitch { get; set; }
     /// <summary>Il file contiene assi di variazione (tabella fvar).</summary>
     public bool IsVariable { get; set; }
+    /// <summary>Asse del peso (wght) dei font variabili: il valore più sottile e quello più spesso; null se l'asse non c'è.</summary>
+    public double? WghtMin { get; set; }
+    public double? WghtMax { get; set; }
+    /// <summary>
+    /// Corsivo dentro lo stesso file variabile: l'asse (slnt o ital) e il valore all'estremo inclinato (es. slnt -14).
+    /// Null se il file non ce l'ha.
+    /// </summary>
+    public string? SlantAxis { get; set; }
+    public double? SlantValue { get; set; }
+    /// <summary>
+    /// Gli assi di variazione del file, separati da "|" ("wght|slnt", "opsz", "wght|EXPO=Expose": quelli propri del disegnatore
+    /// hanno anche il nome scritto nel file); "" se non ne ha.
+    /// Null = non ancora letti (analisi fatte prima che l'app li leggesse: si rileggono).
+    /// </summary>
+    public string? Axes { get; set; }
+
+    /// <summary>
+    /// Gli assi vanno (ri)letti dal file: mai letti, letti nel formato di prima (separati da spazi, senza i nomi),
+    /// o con un asse del disegnatore senza il suo nome.
+    /// </summary>
+    public static bool NeedsAxes(FontInfo i) =>
+        i.Axes is null || (i.Axes.Contains(' ') && !i.Axes.Contains('|'))
+        || i.Axes.Split('|').Any(t => t.Length == 4 && t.All(char.IsUpper));
     /// <summary>Misura della forma (ShapeProbe): true = con grazie, false = senza, null = non misurato o incerto.</summary>
     public bool? ShapeSerif { get; set; }
 
@@ -72,7 +95,7 @@ public sealed class FontInfo
             WeightClass = WeightClass, WidthClass = WidthClass, Glyphs = Glyphs, Vendor = Vendor, FsSelection = FsSelection,
             Note = Note, Error = Error, Slim = true, Subset = Subset,
             FamilyClass = FamilyClass, PanoseFamily = PanoseFamily, PanoseSerif = PanoseSerif, PanoseProportion = PanoseProportion,
-            FixedPitch = FixedPitch, IsVariable = IsVariable, ShapeSerif = ShapeSerif, Schema = Schema,
+            FixedPitch = FixedPitch, IsVariable = IsVariable, WghtMin = WghtMin, WghtMax = WghtMax, SlantAxis = SlantAxis, SlantValue = SlantValue, Axes = Axes, ShapeSerif = ShapeSerif, Schema = Schema,
             Copyright = Cut(Copyright, 400), Trademark = Cut(Trademark, 300), License = Cut(License, 400),
         };
     }
@@ -84,13 +107,42 @@ public sealed class FontInfo
     };
 
     /// <summary>Riga breve per il catalogo: "di Designer · Fonderia · Anno".</summary>
-    public string CreditLine()
+    public string CreditLine() => CreditLine(true, true);
+
+    /// <summary>
+    /// La fonderia da mostrare: quella scritta nel font o, se manca, quella ricavata dal copyright. Non un pezzo di copyright
+    /// rimasto senza nome ("© 1988"): quello non è un autore.
+    /// </summary>
+    public string? FoundryName
     {
-        var foundry = Foundry ?? FoundryGuess;
+        get
+        {
+            var f = (Foundry ?? FoundryGuess)?.Trim();
+            // almeno una parola vera: "© 1988", "(c) 2004" o "2010" non bastano
+            if (string.IsNullOrEmpty(f) || !System.Text.RegularExpressions.Regex.IsMatch(f.Replace("(c)", "", StringComparison.OrdinalIgnoreCase), @"\p{L}{2}")) return null;
+            return f;
+        }
+    }
+
+    /// <summary>
+    /// I crediti, anche a pezzi: l'autore (disegnatore e fonderia) e l'anno. Nella pagina di una famiglia, quello che
+    /// hanno in comune tutti gli stili si scrive una volta sola accanto al nome, e le righe mostrano solo il resto.
+    /// </summary>
+    public string CreditLine(bool author, bool year)
+    {
+        var parts = new List<string>();
+        if (author && AuthorLine() is { Length: > 0 } a) parts.Add(a);
+        if (year && !string.IsNullOrWhiteSpace(Year)) parts.Add(Year!);
+        return string.Join(" · ", parts);
+    }
+
+    /// <summary>"by Ian Party · newglyph": disegnatore e fonderia (vuoto se il font non li dice).</summary>
+    public string AuthorLine()
+    {
+        var foundry = FoundryName;
         var parts = new List<string>();
         if (!string.IsNullOrWhiteSpace(Designer)) parts.Add("by " + Designer);
         if (!string.IsNullOrWhiteSpace(foundry) && foundry != Designer) parts.Add(foundry!);
-        if (!string.IsNullOrWhiteSpace(Year)) parts.Add(Year!);
         return string.Join(" · ", parts);
     }
 }

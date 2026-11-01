@@ -8,14 +8,14 @@
     </p>
 
     <div class="seg seg-text" role="group" aria-label="Kind of message">
-        <button aria-pressed="@(IsBug ? "true" : "false")" @onclick="() => Lib.OpenFeedback(FeedbackKind.Bug)"><Icon Name="bug" /> Bug</button>
-        <button aria-pressed="@(IsBug ? "false" : "true")" @onclick="() => Lib.OpenFeedback(FeedbackKind.Feature)"><Icon Name="lightbulb" /> Idea</button>
+        <button aria-pressed="@(IsBug ? "true" : "false")" @onclick="() => Lib.OpenFeedback(FeedbackKind.Bug)"><Icon Name="debug" /> Bug</button>
+        <button aria-pressed="@(IsBug ? "false" : "true")" @onclick="() => Lib.OpenFeedback(FeedbackKind.Feature)"><Icon Name="idea" /> Idea</button>
     </div>
 
     @if (sent)
     {
         <div class="card fb-done" role="status">
-            <Icon Name="check-circle" />
+            <Icon Name="checkmark--outline" />
             <div>
                 <b>Thank you, your message has been sent.</b>
                 <p>@(email.Trim().Length > 0 ? "If needed, the answer will arrive at " + email.Trim() + "." : "It arrives by email and will be read soon.")</p>
@@ -52,10 +52,10 @@
             @* contro i programmi che compilano i moduli da soli: una casella che una persona non vede *@
             <input type="checkbox" class="fb-hp" tabindex="-1" aria-hidden="true" autocomplete="off" @bind="botcheck" />
             <div class="fb-acts">
-                <button class="btn" type="submit" disabled="@sending"><Icon Name="@(sending ? "circle-half" : "arrow-right")" /> @(sending ? "Sending…" : "Send")</button>
+                <button class="btn" type="submit" disabled="@sending"><Icon Name="@(sending ? "in-progress" : "arrow--right")" /> @(sending ? "Sending…" : "Send")</button>
                 @if (error is not null)
                 {
-                    <span class="fb-error" role="alert"><Icon Name="warning-circle" /> @error</span>
+                    <span class="fb-error" role="alert"><Icon Name="warning" /> @error</span>
                 }
             </div>
         </form>

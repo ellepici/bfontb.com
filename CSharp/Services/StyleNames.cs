@@ -47,7 +47,97 @@ public static partial class StyleNames
         return 400;
     }
 
+    /// <summary>Il peso detto dal nome dello stile, o null se il nome non ne dice nessuno ("Italic", "Condensed").</summary>
+    public static int? NamedWeight(string label)
+    {
+        var s = " " + Spaced(label) + " ";
+        foreach (var (re, w) in WeightRules) if (re.IsMatch(s)) return w;
+        return PlainWeightRe().IsMatch(s) ? 400 : null;
+    }
+
+    /// <summary>
+    /// Il peso di uno stile analizzato: quello scritto nel file (usWeightClass), più preciso del nome (Book 350, Medium 500…),
+    /// a meno che contraddica il nome di 100 o più. Alcuni file vecchi hanno valori sbagliati: nei Bau di FontShop il Black
+    /// dichiara 400 e tutti gli altri 500, e l'ordine dal più sottile al più spesso verrebbe rovesciato.
+    /// </summary>
+    public static int ReconcileWeight(int? weightClass, string label)
+    {
+        var named = NamedWeight(label);
+        if (weightClass is not int wc || wc <= 0 || wc > 1000) return named ?? 400;
+        if (named is not int n) return wc;
+        return Math.Abs(wc - n) >= 100 ? n : wc;
+    }
+
     public static bool IsItalic(string label) => ItalicRe().IsMatch(" " + Spaced(label) + " ");
+
+    /// <summary>
+    /// Lo stile vero di un file con i nomi sbagliati. Alcuni font scrivono come stile "Regular" anche nel Bold e nell'ExtraBold
+    /// (le versioni TrueType di Americana: stile "Regular", nome completo "AmericanaEF-Bold", peso 700). Se il nome completo
+    /// e il peso scritto nel file sono d'accordo fra loro e non con lo stile, vale il nome completo; altrimenti resta lo stile
+    /// scritto (nei Bau è il peso del file a essere sbagliato, e lì nome e nome completo dicono la stessa cosa).
+    /// </summary>
+    public static string TrueSub(string sub, string? family, string? full, int? weightClass, bool italic, string fileName)
+    {
+        if (string.IsNullOrWhiteSpace(full) || weightClass is not int wc || wc <= 0 || wc > 1000) return sub;
+        // solo quando lo stile scritto non dice un peso: "Regular", "Roman", "Italic"… (un "Heavy" o un "Nera" restano come sono);
+        // e se anche il nome del file dice "Regular" ("AGBookRounded-Regular": Book è della famiglia), resta "Regular"
+        static bool Plain(string s) => Spaced(s).Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .All(w => w is "regular" or "roman" or "normal" or "plain" || ItalicRe().IsMatch(" " + w + " "));
+        if (!Plain(sub) || Plain(StyleLabel(fileName))) return sub;
+        // il peso sta nel nome della famiglia scritto nel file ("Amplitude-Bold", stile "Regular"): vale quello
+        if (WeightTail(family) is { } tail) return italic && !IsItalic(tail) ? tail + " Italic" : tail;
+        if (Math.Abs(wc - 400) < 100) return sub;
+        var fromFull = StyleOfFull(full, family);
+        if (fromFull is null || NamedWeight(fromFull) is not int fw || Math.Abs(wc - fw) >= 100) return sub;
+        // le parole dello stile scritto che non riguardano il peso restano (Condensed, Italic…)
+        if (italic && !IsItalic(fromFull)) fromFull += " Italic";
+        return fromFull;
+    }
+
+    /// <summary>
+    /// Le parole di peso in fondo al nome di una famiglia: "Amplitude-Bold" → "Bold", "Futura Light" → "Light".
+    /// Null se non ce ne sono o se il nome è fatto solo di quelle (la famiglia "Ultra" resta una famiglia).
+    /// </summary>
+    private static string? WeightTail(string? family)
+    {
+        if (string.IsNullOrWhiteSpace(family)) return null;
+        var words = family.Split(['-', '_', ' '], StringSplitOptions.RemoveEmptyEntries)
+            .SelectMany(w => Spaced(w).Split(' ', StringSplitOptions.RemoveEmptyEntries)).ToList();
+        int first = words.Count;
+        while (first > 0 && IsStyleWord(words, first - 1)) first--;
+        // "Sans", "Serif", "Display"… in testa alla coda sono parte del nome ("BentonSans Bold" → "Bold", non "Sans Bold")
+        while (first < words.Count && words[first] is "sans" or "serif" or "mono" or "slab" or "text" or "display" or "super") first++;
+        if (first == 0 || first == words.Count) return null;
+        var tail = string.Join(' ', words.Skip(first));
+        // solo se dice davvero un peso (Bold, Light, Black…), non una larghezza o "Regular"; "Super" (GT Super) è un nome
+        if (tail.Split(' ').Contains("super") || !WeightRules.Any(r => r.Re.IsMatch(" " + tail + " "))) return null;
+        return string.Join(' ', words.Skip(first).Select(Word));
+    }
+
+    /// <summary>Lo stile dal nome completo: "AmericanaEF-ExtraBold" con famiglia "AmericanaEF" → "Extra Bold".</summary>
+    private static string? StyleOfFull(string full, string? family)
+    {
+        string rest = full;
+        if (!string.IsNullOrEmpty(family))
+        {
+            // si toglie la famiglia dall'inizio, ignorando spazi e trattini ("Americana Std" in "AmericanaStd-Bold")
+            int i = 0, j = 0;
+            while (i < full.Length && j < family.Length)
+            {
+                if (!char.IsLetterOrDigit(full[i])) { i++; continue; }
+                if (!char.IsLetterOrDigit(family[j])) { j++; continue; }
+                if (char.ToLowerInvariant(full[i]) != char.ToLowerInvariant(family[j])) break;
+                i++; j++;
+            }
+            while (j < family.Length && !char.IsLetterOrDigit(family[j])) j++;
+            if (j < family.Length) return null;   // il nome completo non comincia con la famiglia: meglio non indovinare
+            rest = full[i..];
+        }
+        rest = rest.Trim(' ', '-', '_');
+        if (rest.Length == 0) return null;
+        var label = StyleLabel("X-" + rest.Replace(' ', '-') + ".otf");
+        return label == "X-" + rest.Replace(' ', '-') ? null : label;
+    }
 
     /// <summary>
     /// Nome leggibile dello stile ricavato dal nome del file (quando il font non è stato analizzato):
@@ -150,8 +240,12 @@ public static partial class StyleNames
     private static string Stem(string fileName)
     {
         int dot = fileName.LastIndexOf('.');
-        return dot > 0 ? fileName[..dot] : fileName;
+        var stem = dot > 0 ? fileName[..dot] : fileName;
+        // le copie fatte dal Finder ("Light (2)", "Light copy") hanno lo stesso stile dell'originale
+        return CopyMarkRe().Replace(stem, "");
     }
+
+    [GeneratedRegex(@"\s*(\(\d+\)|\bcop(y|ia)(\s*\d+)?)$", RegexOptions.IgnoreCase)] private static partial Regex CopyMarkRe();
 
     // ---- regole per la proposta dell'analisi ----
 
@@ -213,6 +307,7 @@ public static partial class StyleNames
         return (string.Join(' ', baseWords), variant, guessed);
     }
 
+    [GeneratedRegex(@"\b(regular|roman|normal|plain|book|text)\b")] private static partial Regex PlainWeightRe();
     [GeneratedRegex("([a-z])([A-Z])")] private static partial Regex CamelRe();
     [GeneratedRegex("([A-Z]+)([A-Z][a-z])")] private static partial Regex AcronymRe();
     [GeneratedRegex("(unlicensed|trial|test|demo|webfont)", RegexOptions.IgnoreCase)] private static partial Regex TrialWordRe();

@@ -1,0 +1,18 @@
+@* La cartella aperta, in alto a destra accanto al menu: un clic apre sotto un piccolo riquadro per cambiarla,
+   trascinandone un'altra o scegliendola (il campo #pick è in App). Senza cartella aperta invita ad aprirne una. *@
+<div class="fold" @onkeydown="OnKey">
+    <button class="@(open ? "fold-btn open" : "fold-btn")" aria-haspopup="dialog" aria-expanded="@(open ? "true" : "false")"
+            title="@(Lib.IsDemo ? "Open a font folder" : "Open another folder")" @onclick="Toggle"><Icon Name="folder" /><span>@(Lib.IsDemo ? "Open folder" : Lib.RootName)</span></button>
+    @if (open)
+    {
+        <div class="dd-back" @onclick="Close"></div>
+        <div class="fold-pop" role="dialog" aria-label="@(Lib.IsDemo ? "Open a font folder" : "Open another folder")">
+            <div class="fold-dz">
+                <Icon Name="folder--open" Class="fold-ico" />
+                <b>@(Lib.IsDemo ? "Drop your font folder here" : "Drop another font folder here")</b>
+                <div class="dz-or" aria-hidden="true"><span>or</span></div>
+                <label class="btn sm" for="pick" @onclick="CloseSoon"><Icon Name="folder--open" /> Choose a folder</label>
+            </div>
+        </div>
+    }
+</div>

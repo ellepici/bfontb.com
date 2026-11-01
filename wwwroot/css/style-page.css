@@ -24,16 +24,28 @@
 .gx-host.waiting { opacity: .45; pointer-events: none; }   /* lo stile precedente, mentre si leggono i caratteri del nuovo */
 .gx { height: 100%; display: grid; grid-template-columns: minmax(280px, 5fr) minmax(0, 7fr); grid-template-rows: minmax(0, 1fr); gap: 24px; outline: none; }
 .gx-big { display: flex; flex-direction: column; min-height: 0; border: 1px solid var(--rule); background: var(--sheet); border-radius: 2px; overflow: hidden; }
-.gx-stage { position: relative; flex: 1; min-height: 0; container-type: size; }
-.gx-svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; overflow: visible; }   /* le linee escono dal riquadro e arrivano ai bordi */
+.gx-stage { position: relative; flex: 1; min-height: 0; container-type: size; --gut: 92px; }
+/* a sinistra la colonna con i nomi delle linee, a destra il disegno (lui solo prende i colori scelti in Colors).
+   Il disegno è un quadrato di 1000 unità al centro della sua parte: ogni nome sta all'altezza della sua linea */
+.gx-gutter { position: absolute; left: 0; top: 0; bottom: 0; width: var(--gut); background: var(--paper); border-right: 1px solid var(--rule); }
+.gx-lab {
+  position: absolute; left: 0; right: 0; top: calc(50cqh + (var(--y) / 1000 - .5) * min(100cqw - var(--gut), 100cqh));
+  transform: translateY(-100%); padding: 0 8px 4px 10px;
+  font: 11.5px/1.2 var(--f-ui); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gx-lab.strong { color: var(--ink); }
+.gx-lab.below { transform: none; padding: 4px 8px 0 10px; }   /* linee vicine: il nome sotto la sua */
+.gx-canvas, .gx-glyph { position: absolute; left: var(--gut); right: 0; top: 0; bottom: 0; }
+.gx-canvas { background: var(--sheet); }
+.gx-glyph { container-type: size; overflow: hidden; pointer-events: none; }
+.gx-svg { position: absolute; left: var(--gut); top: 0; width: calc(100% - var(--gut)); height: 100%; display: block; overflow: visible; }   /* le linee escono dal quadrato: a destra fino al bordo, a sinistra sotto i nomi */
 /* lo stesso quadrato in cui l'SVG disegna il suo riquadro 1000 × 1000 (centrato, lato = il lato corto); --u = una unità */
 .gx-sq { position: absolute; left: calc(50% - min(100cqw, 100cqh) / 2); top: calc(50% - min(100cqw, 100cqh) / 2); width: min(100cqw, 100cqh); aspect-ratio: 1; --u: calc(min(100cqw, 100cqh) / 1000); pointer-events: none; }
-.gx-line { stroke: var(--rule); stroke-width: 2; }
+.gx-line { stroke: var(--rule); stroke-width: 1; vector-effect: non-scaling-stroke; }   /* 1 px come i trattini dei nomi a sinistra */
 .gx-line.strong { stroke: var(--muted); }
-.gx-lab { font-family: var(--f-ui); font-size: 26px; fill: var(--muted); }
 /* il margine interno (1em) allarga la zona in cui Safari disegna: le forme alternative (ornamenti, svolazzi) sono più grandi
    del carattere di partenza e senza questo spazio venivano tagliate. Il JavaScript ne tiene conto quando centra. */
-.gx-char { position: absolute; padding: 1em; white-space: pre; line-height: normal; color: var(--ink); font-kerning: normal; visibility: hidden; }
+.gx-char { position: absolute; padding: 1em; white-space: pre; line-height: normal; color: var(--spec-auto-ink); font-kerning: normal; visibility: hidden; }
 .gx-char.placed { visibility: visible; }   /* il JavaScript lo mette sulla linea di base e al centro del disegno, poi lo mostra */
 .gx-bl { display: inline-block; width: 0; height: 0; vertical-align: baseline; }
 .gx-info { flex: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border-top: 1px solid var(--rule); background: var(--paper); }
@@ -42,7 +54,7 @@
 .gx-what span { color: var(--muted); }
 .gx-grp { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gx-nav { border: 1px solid var(--sq-b, var(--sq-bc)); --sq-bc: var(--rule); background: var(--sheet); color: var(--ink); width: 36px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 16px; display: grid; place-items: center; }
-.gx-nav:hover { --sq-bc: var(--ink); }
+.gx-nav:hover { --sq-bc: var(--proof); }
 
 .gx-list { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 8px; }
 .gx-sum { margin: 0 0 14px; font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted); line-height: 1.5; }
@@ -52,7 +64,7 @@
 .gg h4 { font-size: 13px; font-weight: 600; margin: 0 0 8px; display: flex; gap: 8px; align-items: baseline; }
 .gg h4 span { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11px; font-weight: 400; color: var(--muted); }
 .gg-cells { display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr)); border-top: 1px solid var(--rule); border-left: 1px solid var(--rule); }
-.gc { aspect-ratio: 1; border: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); background: var(--sheet); color: var(--ink); font-size: 21px; line-height: 1; padding: 0; cursor: pointer; display: grid; place-items: center; overflow: hidden; white-space: nowrap; font-kerning: none; }
+.gc { aspect-ratio: 1; border: 0; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); background: var(--sheet); color: var(--spec-auto-ink); font-size: 21px; line-height: 1; padding: 0; cursor: pointer; display: grid; place-items: center; overflow: hidden; white-space: nowrap; font-kerning: none; }
 .gc:hover { background: var(--proof-soft); }
 .gc.on { background: var(--proof); color: var(--paper); }
 .gg-more { margin-top: 8px; }
@@ -61,8 +73,8 @@
 /* Prova ai vari corpi */
 .wf { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 4px 12px; align-items: baseline; padding-block: 6px; border-bottom: 1px solid var(--rule); }
 .wf span { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.wf div { white-space: nowrap; overflow: hidden; }
-.para { margin-top: 18px; font-size: 17px; line-height: 1.55; max-width: 65ch; }
+.wf div { color: var(--spec-auto-ink); white-space: nowrap; overflow: hidden; }
+.para { color: var(--spec-auto-ink); margin-top: 18px; font-size: 17px; line-height: 1.55; max-width: 65ch; }
 
 @media (max-width: 1000px) {
   .sv-body.fill { overflow-y: auto; }
@@ -81,27 +93,29 @@
 .sv-head { position: relative; }
 .sv-name { display: flex; gap: 14px; align-items: center; }
 .sv-name h2 { min-width: 0; }
-.sv-acts .cred-btn { height: 28px; }
-.cred-btn[aria-expanded=true] { background: var(--proof-soft); --sq-bc: var(--proof); color: var(--proof); }
-.cred-back { position: fixed; inset: 0; z-index: 19; }
+.sv-file { font-family: var(--f-data); font-variant-numeric: tabular-nums; font-size: 12px; color: var(--muted); align-self: flex-end; padding-bottom: 4px; overflow-wrap: anywhere; }   /* il file accanto al nome */
+/* il pulsante è una tendina come le altre (dd-btn): icona, Credits, freccia; il riquadro esce dal suo lato destro */
+.cred-dd { position: relative; }   /* non .cred: è già il nome dei crediti nelle righe del catalogo */
+.cred-btn { justify-content: flex-start; gap: 8px; font-family: var(--f-ui); }
+.cred-btn .ph:first-child { width: 16px; height: 16px; }
+.cred-btn .dd-caret { margin-left: 2px; }
+.cred-btn[aria-expanded=true] .dd-caret { transform: rotate(180deg); color: var(--ink); }
 .cred-pop {
-  position: absolute; z-index: 20; top: calc(100% + 8px); right: 0;
-  width: min(720px, 100%); max-height: max(240px, calc(100dvh - 330px)); overflow-y: auto; overscroll-behavior: contain;
-  background: var(--sheet); border: 1px solid var(--ink); border-radius: 2px; padding: 14px 16px 16px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, .18);
+  position: absolute; z-index: 30; top: calc(100% + 8px); right: 0;
+  width: min(720px, calc(100vw - 460px)); max-height: max(240px, calc(100dvh - 330px)); overflow-y: auto; overscroll-behavior: contain;
+  background: var(--sheet); border: 1px solid var(--ink); border-radius: 2px; padding: 14px 16px 16px; box-sizing: border-box;
 }
-.cred-pop-h { display: flex; gap: 12px; align-items: baseline; justify-content: space-between; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
+.cred-pop-h { margin-bottom: 12px; font-size: 13px; color: var(--muted); }
 .cred-pop-h b { color: var(--ink); font-family: var(--f-data); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 12px; overflow-wrap: anywhere; }
 
 /* Colori scelti per i testi di prova (Colors in alto): il carattere grande, la griglia e la prova */
-.app.tinted .gx-big { background: var(--spec-paper, var(--sheet)); }
-.app.tinted .gx-char { color: var(--spec-ink, var(--ink)); }
-.app.tinted .gx-line { stroke: color-mix(in srgb, var(--spec-ink, var(--ink)) 20%, transparent); }
-.app.tinted .gx-line.strong { stroke: color-mix(in srgb, var(--spec-ink, var(--ink)) 45%, transparent); }
-.app.tinted .gx-lab { fill: color-mix(in srgb, var(--spec-ink, var(--ink)) 60%, transparent); }
-.app.tinted .gc { background: var(--spec-paper, var(--sheet)); color: var(--spec-ink, var(--ink)); border-color: color-mix(in srgb, var(--spec-ink, var(--ink)) 16%, var(--spec-paper, var(--sheet))); }
-.app.tinted .gc:hover { background: color-mix(in srgb, var(--spec-ink, var(--ink)) 12%, var(--spec-paper, var(--sheet))); }
+.app.tinted .gx-canvas { background: var(--spec-paper, var(--sheet)); }
+.app.tinted .gx-char { color: var(--spec-ink, var(--spec-auto-ink)); }
+/* le linee di costruzione restano nei colori dell'interfaccia: non seguono il colore del carattere */
+/* nella griglia dei caratteri solo i glifi prendono il colore del testo: le linee e il passaggio del mouse restano quelli dell'interfaccia */
+.app.tinted .gc { background: var(--spec-paper, var(--sheet)); color: var(--spec-ink, var(--spec-auto-ink)); }
+.app.tinted .gc:hover { background: var(--proof-soft); }
 .app.tinted .gc.on { background: var(--proof); color: #fff; }
-.app.tinted .spec-sheet { background: var(--spec-paper, var(--sheet)); color: var(--spec-ink, var(--ink)); padding: 4px 16px 16px; border-radius: 2px; }
-.app.tinted .spec-sheet .wf { border-bottom-color: color-mix(in srgb, var(--spec-ink, var(--ink)) 16%, transparent); }
-.app.tinted .spec-sheet .wf span, .app.tinted .spec-sheet .sec-l { color: color-mix(in srgb, var(--spec-ink, var(--ink)) 60%, transparent); }
+/* nella prova solo il testo prende il colore scelto: misure in pt, titoletti e righe restano dell'interfaccia */
+.app.tinted .spec-sheet .wf div, .app.tinted .spec-sheet .para { color: var(--spec-ink, var(--spec-auto-ink)); }
+.app.papered .spec-sheet { background: var(--spec-paper); padding: 4px 16px 16px; margin-inline: -16px; border-radius: 2px; }

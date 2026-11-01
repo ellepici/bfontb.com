@@ -31,6 +31,8 @@ public sealed class FontLibrary(BrowserBridge bridge, FontLoader loader, Analysi
     /// <summary>Cresce a ogni cambiamento: le viste lo ricevono come parametro e così si ridisegnano.</summary>
     public int Version { get; private set; }
 
+    private void OnSlantFound() { infoStamp++; Notify(); }
+
     public void Notify()
     {
         Version++;
@@ -48,7 +50,50 @@ public sealed class FontLibrary(BrowserBridge bridge, FontLoader loader, Analysi
     /// </summary>
     public bool Connected { get; private set; }
     public string? StatusMessage { get; set; }
-    public Dictionary<string, TypeFamily> Families { get; private set; } = DemoFonts.Create();
+    /// <summary>
+    /// Le famiglie che l'app mostra: quelle della cartella senza i font web, oppure (filtro Web acceso) solo i font web,
+    /// ognuno sotto la sua famiglia come variante principale. AllFamilies: tutte, così come le ha costruite l'organizzazione.
+    /// </summary>
+    public Dictionary<string, TypeFamily> Families
+    {
+        get => WebOnly ? (_web ??= WebView(_all)) : _all;
+        private set { _all = value; _web = null; }
+    }
+    public Dictionary<string, TypeFamily> AllFamilies => _all;
+    private Dictionary<string, TypeFamily> _all = DemoFonts.Create();
+    private Dictionary<string, TypeFamily>? _web;
+
+    /// <summary>Filtro Web: si vedono solo i font per il web (woff, woff2). Si ricorda.</summary>
+    public bool WebOnly { get; private set; }
+
+    public async Task SetWebOnlyAsync(bool on)
+    {
+        WebOnly = on;
+        CatalogPicks.Clear();
+        await SetAsync("pf.webonly", WebOnly);
+        Notify();
+    }
+
+    // le famiglie con i soli font web: la loro variante "Web" diventa quella principale (col nome della famiglia)
+    private static Dictionary<string, TypeFamily> WebView(Dictionary<string, TypeFamily> all)
+    {
+        var web = new Dictionary<string, TypeFamily>(all.Comparer);
+        foreach (var f in all.Values)
+        {
+            if (!f.Variants.TryGetValue("Web", out var list) || list.Count == 0) continue;
+            var w = new TypeFamily(f.Name);
+            foreach (var s in list) w.Add(f.Name, s);
+            web[f.Name] = w;
+        }
+        return web;
+    }
+
+    /// <summary>Quante famiglie hanno font web e rispondono a ricerca e filtri (il numero accanto a "Web").</summary>
+    public int WebFamilyCount() =>
+        SearchedFamilies(_web ??= WebView(_all)).Count(f => (Filters == FontTrait.None || (f.Traits() & Filters) == Filters) && MatchesItalic(f));
+
+    /// <summary>Con Italic acceso contano solo le famiglie che hanno corsivi (come nell'elenco a sinistra e nel catalogo).</summary>
+    public bool MatchesItalic(TypeFamily f) => !Italic || f.Styles(false).Any(s => s.HasItalic);
 
     // ---- analisi e correzioni ----
     public Dictionary<string, FontInfo> Analysis { get; private set; } = new(StringComparer.Ordinal);
@@ -73,7 +118,8 @@ public sealed class FontLibrary(BrowserBridge bridge, FontLoader loader, Analysi
 
     /// <summary>
     /// Spessore del catalogo: ogni riga (e scheda) mostra lo stile più vicino a questo peso, dritto se c'è.
-    /// Le righe in cui si è scelto uno stile con la loro tendina restano come le si è lasciate (vedi CatalogPicks).
+    /// Le righe in cui si è scelto uno stile con la loro tendina restano come le si è lasciate (vedi CatalogPicks),
+    /// finché non si cambia di nuovo lo spessore o il corsivo generale: allora tornano a seguirlo anche loro.
     /// Non si ricorda: a ogni apertura della cartella (anche dopo un ricaricamento) torna a Regular.
     /// </summary>
     public int Weight { get; private set; } = 400;
@@ -93,6 +139,47 @@ public sealed class FontLibrary(BrowserBridge bridge, FontLoader loader, Analysi
 
     public Task SetColorsAsync(string? ink, string? paper) { InkColor = ink; PaperColor = paper; Notify(); return Task.CompletedTask; }
 
+    /// <summary>Scambia testo e sfondo; con i colori del tema (non ancora scelti) si parte da inchiostro su bianco.</summary>
+    public Task SwapColorsAsync() => SetColorsAsync(PaperColor ?? "#FFFFFF", InkColor ?? "#16171A");
+
+    /// <summary>Come si scrive il codice del colore nelle tendine: "hex" (#E85D9E) o "rgb" (232, 93, 158). Si ricorda.</summary>
+    public string ColorFormat { get; private set; } = "hex";
+
+    public async Task SetColorFormatAsync(string format)
+    {
+        ColorFormat = format == "rgb" ? "rgb" : "hex";
+        await SetAsync("pf.cfmt", ColorFormat);
+        Notify();
+    }
+
+    /// <summary>Gli ultimi colori personalizzati usati (testo e sfondo insieme), il più recente per primo. Si ricordano.</summary>
+    public List<string> RecentColors { get; private set; } = [];
+    public const int RecentMax = 9;   // una riga della tavolozza
+
+    // l'ultimo colore messo nei recenti e quando: i ritocchi entro pochi secondi lo aggiornano invece di aggiungerne altri
+    private DateTime recentAt = DateTime.MinValue;
+    private static readonly TimeSpan RecentWindow = TimeSpan.FromSeconds(6);
+
+    /// <summary>
+    /// Un colore personalizzato appena scelto (barre o codice) va subito nei recenti. Se il precedente è di meno di 6 secondi fa
+    /// (si sta ancora cercando la tinta giusta) prende il suo posto; se no si aggiunge in cima. Niente doppioni, al massimo una riga.
+    /// </summary>
+    public async Task RememberColorAsync(string hex)
+    {
+        var now = DateTime.UtcNow;
+        bool editing = now - recentAt < RecentWindow && RecentColors.Count > 0;
+        recentAt = now;
+        if (editing) RecentColors.RemoveAt(0);
+        RecentColors.RemoveAll(c => string.Equals(c, hex, StringComparison.OrdinalIgnoreCase));
+        RecentColors.Insert(0, hex);
+        if (RecentColors.Count > RecentMax) RecentColors.RemoveRange(RecentMax, RecentColors.Count - RecentMax);
+        await SetAsync("pf.recent", RecentColors);
+        Notify();
+    }
+
+    /// <summary>Scelto un colore già pronto (tavolozza o recenti): il prossimo colore personalizzato sarà uno nuovo, non un ritocco.</summary>
+    public void EndColorEdit() => recentAt = DateTime.MinValue;
+
     /// <summary>Gli spessori tra cui scegliere, con i nomi usuali.</summary>
     public static readonly (int Value, string Name)[] Weights =
     [
@@ -109,8 +196,6 @@ public sealed class FontLibrary(BrowserBridge bridge, FontLoader loader, Analysi
     /// <summary>Aspetto dell'interfaccia: "light", "dark" o "auto" (segue il sistema).</summary>
     public string Theme { get; private set; } = "auto";
     public int Tracking { get; set; }
-    public bool IncludeWeb { get; set; }
-    public HashSet<string> Pins { get; private set; } = [];
 
     /// <summary>Filtri per caratteristica attivi: una famiglia deve averle tutte.</summary>
     public FontTrait Filters { get; private set; }
@@ -136,10 +221,11 @@ public sealed class FontLibrary(BrowserBridge bridge, FontLoader loader, Analysi
     public StyleRef? FindStyle(string? path)
     {
         if (path is null) return null;
-        foreach (var f in Families.Values)
-            foreach (var (variant, list) in f.Variants)
-                foreach (var s in list)
-                    if (s.Path == path) return new StyleRef(s, f, variant);
+        foreach (var source in new[] { Families, _all })
+            foreach (var f in source.Values)
+                foreach (var (variant, list) in f.Variants)
+                    foreach (var s in list)
+                        if (s.Path == path) return new StyleRef(s, f, variant);
         return null;
     }
 
@@ -171,19 +257,31 @@ public sealed class FontLibrary(BrowserBridge bridge, FontLoader loader, Analysi
 
     public string TextFor(string family) => SampleText == NameToken ? family : SampleText;
 
+    /// <summary>
+    /// Il testo di prova è una sequenza di caratteri più che di parole (Alphabet, Figures, o un testo con una "parola"
+    /// lunghissima): nel catalogo va a capo anche in mezzo, così la seconda riga si riempie invece di fermarsi a metà
+    /// e mandare tutta la parola lunga oltre il limite delle due righe.
+    /// </summary>
+    public bool SampleIsCharacters =>
+        SampleText == Presets["Alphabet"] || SampleText == Presets["Figures"]
+        || SampleText.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(w => w.Length >= 14);
+
     /// <param name="path">L'indirizzo con cui si è aperta l'app (/app, /app/family/abc-marfa…): decide la vista.</param>
     public async Task InitAsync(string path)
     {
+        loader.SlantFound -= OnSlantFound;
+        loader.SlantFound += OnSlantFound;   // un variabile con il corsivo dentro, appena scoperto: tendine e conteggi si rifanno
         SampleText = await GetAsync("pf.text", SampleText);
         if (OldPresets.TryGetValue(SampleText, out var english)) SampleText = english;
         Size = Math.Clamp(await GetAsync("pf.size", Size), 4, 400);
         Theme = await GetAsync("pf.theme", "auto");
-        Pins = await GetAsync("pf.pins", new HashSet<string>());
         Filters = await GetAsync("pf.filters", FontTrait.None) & ~FontTrait.Symbol;   // filtro tolto: se era attivo, si spegne
         // anche ricerca, spaziatura e font Web restano dopo un ricaricamento (finché non si apre un'altra cartella)
         Query = await GetAsync("pf.query", "");
         Tracking = Math.Clamp(await GetAsync("pf.track", 0), -500, 1000);
-        IncludeWeb = await GetAsync("pf.web", false);
+        WebOnly = await GetAsync("pf.webonly", false);
+        ColorFormat = await GetAsync("pf.cfmt", "hex") == "rgb" ? "rgb" : "hex";
+        RecentColors = (await GetAsync("pf.recent", new List<string>())).Take(RecentMax).ToList();
         await RestoreLastFolderAsync();
         // la vista la dice l'indirizzo (prima la si ricordava nel localStorage)
         ShownUrl = path;
@@ -206,11 +304,13 @@ public sealed class FontLibrary(BrowserBridge bridge, FontLoader loader, Analysi
     public async Task SetSampleAsync(string text) { SampleText = string.IsNullOrEmpty(text) ? " " : text; await SetAsync("pf.text", SampleText); Notify(); }
     public async Task SetSizeAsync(int size) { Size = size; await SetAsync("pf.size", Size); Notify(); }
     // spessore e corsivo non si ricordano: a ogni apertura (e ricollegamento) della cartella si riparte dal Regular dritto
-    public Task SetWeightAsync(int weight) { Weight = weight; Notify(); return Task.CompletedTask; }
-    public Task SetItalicAsync(bool italic) { Italic = italic; Notify(); return Task.CompletedTask; }
+    // cambiare spessore o corsivo per tutto il catalogo vale anche per le righe scelte a mano con la loro tendina:
+    // la scelta di riga resta solo finché non si tocca di nuovo l'impostazione generale
+    public Task SetWeightAsync(int weight) { Weight = weight; CatalogPicks.Clear(); Notify(); return Task.CompletedTask; }
+    public Task SetItalicAsync(bool italic) { Italic = italic; CatalogPicks.Clear(); Notify(); return Task.CompletedTask; }
     public async Task SetTrackingAsync(int tracking) { Tracking = tracking; await SetAsync("pf.track", Tracking); Notify(); }
     public async Task SetQueryAsync(string query) { Query = query; await SetAsync("pf.query", Query); Notify(); }
-    public async Task SetIncludeWebAsync(bool on) { IncludeWeb = on; await SetAsync("pf.web", IncludeWeb); Notify(); }
+
 
     /// <summary>
     /// Ogni cartella caricata parte pulita: pangramma, 48 pt, spaziatura 0, nessun filtro, nessuna ricerca, senza i font Web.
@@ -233,14 +333,14 @@ public sealed class FontLibrary(BrowserBridge bridge, FontLoader loader, Analysi
         Tracking = 0;
         Filters = FontTrait.None;
         Query = "";
-        IncludeWeb = false;
+        WebOnly = false;
         CatalogPicks.Clear();
         await SetAsync("pf.text", SampleText);
         await SetAsync("pf.size", Size);
         await SetAsync("pf.filters", Filters);
         await SetAsync("pf.track", Tracking);
         await SetAsync("pf.query", Query);
-        await SetAsync("pf.web", IncludeWeb);
+        await SetAsync("pf.webonly", WebOnly);
     }
     /// <summary>Cambia l'aspetto subito (attributo data-theme sulla pagina) e lo ricorda per i prossimi avvii.</summary>
     public async Task SetThemeAsync(string theme)
@@ -253,22 +353,52 @@ public sealed class FontLibrary(BrowserBridge bridge, FontLoader loader, Analysi
 
     public Task SetGridViewAsync(bool grid) { GridView = grid; Notify(); return Task.CompletedTask; }
 
-    public async Task TogglePinAsync(FontStyle st)
+    /// <summary>
+    /// Nella pagina di uno stile: true sulla scheda dei caratteri, false sulla prova.
+    /// Serve ai comandi in alto per sapere quali hanno effetto (vedi App: StyleOff, TrackOff).
+    /// </summary>
+    public bool StyleGlyphsTab { get; private set; } = true;
+
+    public void SetStyleTab(bool glyphs)
     {
-        if (!Pins.Remove(st.Path)) Pins.Add(st.Path);
-        await SetAsync("pf.pins", Pins);
+        if (StyleGlyphsTab == glyphs) return;
+        StyleGlyphsTab = glyphs;
         Notify();
     }
 
+
+    /// <summary>
+    /// Gli stili di una variante che rispondono ai filtri per caratteristica e, con Italic acceso, i corsivi
+    /// (compresi i variabili con il corsivo dentro): servono ai conteggi e alle varianti della colonna di sinistra.
+    /// </summary>
+    public IEnumerable<FontStyle> ShownStyles(TypeFamily f, string variant) =>
+        f.Variants[variant].Where(s => (Filters == FontTrait.None || (s.Traits(f.Name, variant) & Filters) == Filters) && (!Italic || s.HasItalic));
+
+    /// <summary>Quanti stili della famiglia rispondono ai filtri e al corsivo (tutti, se non ce ne sono).</summary>
+    public int ShownCount(TypeFamily f)
+    {
+        // i conteggi si rifanno solo quando cambia qualcosa che li riguarda, non a ogni aggiornamento della pagina
+        var key = (Families, Filters, Italic, infoStamp);
+        if (!key.Equals(_countKey)) { _counts.Clear(); _countKey = key; }
+        if (!_counts.TryGetValue(f, out var n)) _counts[f] = n = f.VariantNames(false).Sum(v => ShownStyles(f, v).Count());
+        return n;
+    }
+
+    private readonly Dictionary<TypeFamily, int> _counts = [];
+    private object? _countKey;
+    private int infoStamp;   // cresce quando si scopre qualcosa dei file che cambia i conteggi (il corsivo dentro un variabile)
+
     public IEnumerable<TypeFamily> VisibleFamilies() =>
-        SearchedFamilies().Where(f => (Filters == FontTrait.None || (f.Traits() & Filters) == Filters) && (!Italic || f.Styles(false).Any(s => s.Italic)));
+        SearchedFamilies().Where(f => (Filters == FontTrait.None || (f.Traits() & Filters) == Filters) && MatchesItalic(f));
 
     /// <summary>Famiglie che rispondono alla ricerca, prima dei filtri per caratteristica.</summary>
-    public IEnumerable<TypeFamily> SearchedFamilies()
+    public IEnumerable<TypeFamily> SearchedFamilies() => SearchedFamilies(Families);
+
+    private IEnumerable<TypeFamily> SearchedFamilies(Dictionary<string, TypeFamily> source)
     {
         var q = Query.Trim();
-        return Families.Values
-            .Where(f => f.Count(IncludeWeb) > 0 && (q.Length == 0
+        return source.Values
+            .Where(f => f.Count(false) > 0 && (q.Length == 0
                 || f.Name.Contains(q, StringComparison.OrdinalIgnoreCase)
                 || f.Variants.Keys.Any(v => v.Contains(q, StringComparison.OrdinalIgnoreCase))))
             .OrderBy(f => f.Name, StringComparer.InvariantCultureIgnoreCase);
@@ -281,9 +411,27 @@ public sealed class FontLibrary(BrowserBridge bridge, FontLoader loader, Analysi
         Notify();
     }
 
+    /// <summary>I comandi della seconda riga (corpo, spessore, corsivo, spaziatura, colori) non sono più quelli di partenza.</summary>
+    public bool ProofControlsChanged => Size != 48 || Weight != 400 || Italic || Tracking != 0 || InkColor is not null || PaperColor is not null;
+
+    /// <summary>"Clear" della seconda riga: corpo, spessore, corsivo, spaziatura e colori tornano quelli di partenza.</summary>
+    public async Task ClearProofControlsAsync()
+    {
+        Size = 48;
+        Weight = 400;
+        Italic = false;
+        Tracking = 0;
+        InkColor = PaperColor = null;
+        CatalogPicks.Clear();
+        await SetAsync("pf.size", Size);
+        await SetAsync("pf.track", Tracking);
+        Notify();
+    }
+
     public async Task ClearFiltersAsync()
     {
         Filters = FontTrait.None;
+        if (WebOnly) { WebOnly = false; CatalogPicks.Clear(); await SetAsync("pf.webonly", false); }
         await SetAsync("pf.filters", Filters);
         Notify();
     }
@@ -338,7 +486,8 @@ public sealed class FontLibrary(BrowserBridge bridge, FontLoader loader, Analysi
     /// <param name="anchor">La sezione di una variante a cui scendere nella pagina della famiglia (vedi FamilyView).</param>
     public void OpenFamily(string name, string? anchor = null) { View = View.Family; CurrentFamily = name; JumpTo = anchor; Navigated(); }
 
-    /// <summary>Lo stile scelto con la tendina di una riga del catalogo, per famiglia e variante (fino alla prossima cartella).</summary>
+    /// <summary>Lo stile scelto con la tendina di una riga del catalogo, per famiglia e variante: vale fino al prossimo
+    /// cambio di spessore o corsivo generale (SetWeightAsync, SetItalicAsync) o fino alla prossima cartella.</summary>
     public Dictionary<string, string> CatalogPicks { get; } = [];
 
     /// <summary>La sezione della pagina della famiglia a cui scendere appena si apre (poi si azzera).</summary>

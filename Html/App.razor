@@ -1,8 +1,7 @@
 @* Struttura della pagina: barra dei comandi, indice delle famiglie, percorso e vista corrente (catalogo, famiglia, stile, confronto, impostazioni) *@
-<div class="@(Lib.InkColor is null && Lib.PaperColor is null ? "app" : "app tinted")" style="@ColorVars">
-    @* Testata: a sinistra il logo su tre righe, a destra tre righe che insieme sono alte quanto il logo *@
+<div class="@AppClass" style="@ColorVars">
     @* Testata su due righe: a sinistra il logo (tre parole alte quanto le due righe), a destra
-       1) testo di prova, testi pronti, corpo e spaziatura, poi chiaro/scuro e il menu; 2) caratteristiche e "include Web" *@
+       1) testo di prova con i testi pronti e il menu; 2) spessore, corsivo, corpo, spaziatura e colori *@
     <header>
         <h1 class="logo" aria-label="B(efore) Font B(ook)">
             <span>b<span class="dim">efore</span></span>
@@ -12,46 +11,21 @@
         <div class="hrow hrow-top">
             @if (!Lib.IsSidePage)
             {
-                @* comandi del testo di prova: nelle impostazioni non servono *@
-                <div class="controls">
                 @* il testo di prova e, dentro lo stesso riquadro a sinistra, i testi pronti (Pangram, Alphabet…) *@
                 <div class="sample-box">
                     <span id="lbl-preset" class="sr-only">Preset</span>
-                    <Dropdown Class="in-box" Options="PresetOptions" Value="@CurrentPreset" OnChange="UsePresetNamed" LabelledBy="lbl-preset" />
+                    <Dropdown Class="in-box" Steady="true" Options="PresetOptions" Value="@CurrentPreset" OnChange="UsePresetNamed" LabelledBy="lbl-preset" />
                     <input class="sample-input" id="sample" aria-label="Sample text" value="@SampleBoxValue" @oninput="OnSampleInput" />
-                </div>
-                <div class="ctl">
-                    <span id="lbl-size">Size</span>
-                    <Dropdown Editable="true" Options="SizeOptions" Value="@Lib.Size.ToString()" OnChange="OnSize" Parse="ParseSize" Suffix="pt" InputWidth="2.4em" InputMode="decimal" LabelledBy="lbl-size" />
-                </div>
-                @if (!Lib.IsDemo)
-                {
-                    @* spessore e corsivo di tutto il catalogo (le righe con uno stile scelto a mano restano come sono);
-                       restano anche nelle pagine delle famiglie e degli stili, come i filtri: Italic sfoltisce anche l'indice a sinistra *@
-                    <div class="ctl">
-                        <span id="lbl-weight">Weight</span>
-                        <Dropdown Options="WeightOptions" Value="@Lib.Weight.ToString()" OnChange="OnWeight" LabelledBy="lbl-weight" />
-                        <button class="tog-btn" aria-pressed="@(Lib.Italic ? "true" : "false")" title="Catalog in italics: only the families that have them"
-                                @onclick="() => Lib.SetItalicAsync(!Lib.Italic)"><Icon Name="text-italic" /> Italic</button>
-                    </div>
-                }
-                <div class="ctl">
-                    <span id="lbl-track">Tracking</span>
-                    <Dropdown Editable="true" Options="TrackOptions" Value="@Lib.Tracking.ToString()" OnChange="OnTrack" Parse="ParseTracking" Format="FormatTracking" InputWidth="3.2em" LabelledBy="lbl-track" />
-                </div>
-                <div class="ctl">
-                    @* compatta: solo il campione «Aa» con i colori scelti (il nome nel suggerimento), per stare nella riga *@
-                    <span id="lbl-colors" class="sr-only">Colors</span>
-                    <ColorMenu Version="Lib.Version" LabelledBy="lbl-colors" />
-                </div>
                 </div>
             }
             <div class="hacts">
-                @* la scelta della cartella: il campo resta sempre nella pagina, lo aprono "Change folder" nel menu e i pulsanti nelle pagine *@
+                @* la scelta della cartella: il campo resta sempre nella pagina, lo aprono il pulsante della cartella qui accanto e i pulsanti nelle pagine *@
                 <input type="file" id="pick" webkitdirectory directory multiple hidden @ref="pickInput" />
+                @* la cartella aperta, a sinistra del menu: un clic la cambia *@
+                <FolderButton Version="Lib.Version" />
                 @* menu: cartella, impostazioni, chiaro/scuro, pagine e link social *@
                 <div class="menu">
-                    <button class="btn ghost menu-btn" aria-haspopup="true" aria-expanded="@(menuOpen ? "true" : "false")" @onclick="ToggleMenu"><Icon Name="list" /> Menu</button>
+                    <button class="btn ghost menu-btn" aria-haspopup="true" aria-expanded="@(menuOpen ? "true" : "false")" @onclick="ToggleMenu"><Icon Name="menu" /> Menu</button>
                     @if (menuOpen)
                     {
                         <div class="dd-back" @onclick="CloseMenu"></div>
@@ -67,14 +41,13 @@
                                 </div>
                             </div>
                             <div class="menu-sep" role="separator"></div>
-                            <label role="menuitem" class="menu-item" for="pick" @onclick="CloseMenuSoon"><Icon Name="folder-open" /> Change folder</label>
                             <button role="menuitem" class="menu-item" aria-current="@(Lib.View == View.Settings ? "true" : null)" @onclick="MenuSettings">
-                                <Icon Name="gear" /> @(Lib.View == View.Settings ? "Close settings" : "Settings")
+                                <Icon Name="settings" /> @(Lib.View == View.Settings ? "Close settings" : "Settings")
                             </button>
                             <div class="menu-sep" role="separator"></div>
-                            <button role="menuitem" class="menu-item" aria-current="@(Lib.View == View.Credits ? "true" : null)" @onclick="() => MenuPage(View.Credits)"><Icon Name="info" /> Credits</button>
-                            <button role="menuitem" class="menu-item" aria-current="@(IsFeedback(FeedbackKind.Bug) ? "true" : null)" @onclick="() => MenuFeedback(FeedbackKind.Bug)"><Icon Name="bug" /> Report a bug</button>
-                            <button role="menuitem" class="menu-item" aria-current="@(IsFeedback(FeedbackKind.Feature) ? "true" : null)" @onclick="() => MenuFeedback(FeedbackKind.Feature)"><Icon Name="lightbulb" /> Suggest a feature</button>
+                            <button role="menuitem" class="menu-item" aria-current="@(Lib.View == View.Credits ? "true" : null)" @onclick="() => MenuPage(View.Credits)"><Icon Name="information" /> Credits</button>
+                            <button role="menuitem" class="menu-item" aria-current="@(IsFeedback(FeedbackKind.Bug) ? "true" : null)" @onclick="() => MenuFeedback(FeedbackKind.Bug)"><Icon Name="debug" /> Report a bug</button>
+                            <button role="menuitem" class="menu-item" aria-current="@(IsFeedback(FeedbackKind.Feature) ? "true" : null)" @onclick="() => MenuFeedback(FeedbackKind.Feature)"><Icon Name="idea" /> Suggest a feature</button>
                             <div class="menu-sep" role="separator"></div>
                             <div class="menu-k">Follow</div>
                             @foreach (var (name, icon, url) in Social)
@@ -89,43 +62,46 @@
         @if (!Lib.IsSidePage)
         {
         <div class="hrow hrow-filters">
-            @* filtri per caratteristica, nella riga sotto il testo di prova *@
-            @if (!Lib.IsDemo)
-            {
-            <div class="filters" role="group" aria-labelledby="lbl-traits">
-                <span class="filters-h" id="lbl-traits">Characteristics</span>
-                <div class="chips">
-                    @foreach (var chip in TraitChips)
-                    {
-                        <button class="chip" aria-pressed="@(chip.Active ? "true" : "false")" disabled="@(chip.Count == 0 && !chip.Active)" @onclick="() => Lib.ToggleFilterAsync(chip.Trait)">
-                            @if (chip.Active)
-                            {
-                                <Icon Name="check" Class="chip-check" />
-                            }
-                            @chip.Label <span class="n">@chip.Count</span>
-                        </button>
-                    }
-                </div>
-                @if (Lib.Filters != FontTrait.None)
+            @* la riga sotto, in quest'ordine: spessore e corsivo, corpo, spaziatura, colore del testo, scambio, colore dello sfondo
+               (i font per il web sono un filtro a sinistra, "Web") *@
+            <div class="controls">
+                @* le etichette dei comandi sono icone Carbon (il nome resta per i lettori di schermo e nel suggerimento) *@
+                @if (!Lib.IsDemo)
                 {
-                    <button class="lnk" @onclick="Lib.ClearFiltersAsync">Clear</button>
+                    @* spessore e corsivo di tutto il catalogo (le righe con uno stile scelto a mano restano come sono);
+                       restano anche nelle pagine delle famiglie e degli stili, come i filtri: Italic sfoltisce anche l'indice a sinistra *@
+                    <div class="ctl">
+                        @* con il filtro Variable acceso lo spessore non si sceglie: i variabili lo animano da soli, dal più sottile al più spesso *@
+                        <span id="lbl-weight" class="@(WeightOff ? "ctl-ico off" : "ctl-ico")" title="@WeightTitle"><Icon Name="text--bold" /><span class="sr-only">Weight</span></span>
+                        <Dropdown Steady="true" Options="WeightOptions" Value="@Lib.Weight.ToString()" OnChange="OnWeight" NotifySame="true" LabelledBy="lbl-weight" Disabled="WeightOff" />
+                        @* nella pagina di uno stile spessore, corsivo, corpo e (sui caratteri) spaziatura non hanno effetto: spenti *@
+                        <button class="tog-btn ico" aria-pressed="@(Lib.Italic ? "true" : "false")" aria-label="Italic" disabled="@StyleOff"
+                                title="@(StyleOff ? "Italic: not used on the style page" : "Italic: the catalog in italics, only the families that have them")"
+                                @onclick="() => Lib.SetItalicAsync(!Lib.Italic)"><Icon Name="text--italic" /></button>
+                    </div>
                 }
-                @if (Lib.ClassificationIsPartial)
+                <div class="ctl">
+                    <span id="lbl-size" class="@(StyleOff ? "ctl-ico off" : "ctl-ico")" title="@(StyleOff ? "Size: not used on the style page" : "Size")"><Icon Name="text--scale" /><span class="sr-only">Size</span></span>
+                    <Dropdown Editable="true" Options="SizeOptions" Value="@Lib.Size.ToString()" OnChange="OnSize" Parse="ParseSize" Suffix="pt" InputWidth="2.4em" InputMode="decimal" LabelledBy="lbl-size" Disabled="StyleOff" />
+                </div>
+                <div class="ctl">
+                    <span id="lbl-track" class="@(TrackOff ? "ctl-ico off" : "ctl-ico")" title="@(TrackOff ? "Tracking: used only in Proof" : "Tracking")"><Icon Name="text--tracking" /><span class="sr-only">Tracking</span></span>
+                    <Dropdown Editable="true" Options="TrackOptions" Value="@Lib.Tracking.ToString()" OnChange="OnTrack" Parse="ParseTracking" Format="FormatTracking" InputWidth="3.2em" LabelledBy="lbl-track" Disabled="TrackOff" />
+                </div>
+                <div class="ctl">
+                    @* i colori, separati: testo e sfondo, ognuno con la sua icona (dentro, il colore scelto) *@
+                    <ColorMenu Version="Lib.Version" Ink="true" />
+                    @* in mezzo alle due tendine: scambia i colori del testo e dello sfondo *@
+                    <button type="button" class="cm-swap" title="Swap text and background colors" aria-label="Swap text and background colors"
+                            @onclick="Lib.SwapColorsAsync"><Icon Name="renew--alt" /></button>
+                    <ColorMenu Version="Lib.Version" Ink="false" />
+                </div>
+                @if (Lib.ProofControlsChanged)
                 {
-                    @* i filtri finora leggono solo i nomi: un'icona info spiega cosa vuol dire e porta all'analisi *@
-                    <span class="info-tip">
-                        <button class="info-btn" aria-label="About these filters" aria-describedby="tip-traits"><Icon Name="info" /></button>
-                        <span class="tip" role="tooltip" id="tip-traits">
-                            <b>Based on names only.</b>
-                            For now the filters read just the font and folder names, for example “Serif” or “Mono” in “Plex Mono”,
-                            so some fonts can be missing or in the wrong group.
-                            <button class="lnk" @onclick="Lib.OpenSettings">Analyse the folder</button> to sort them with the data inside each font.
-                        </span>
-                    </span>
+                    @* come "Clear" accanto alle caratteristiche: riporta corpo, spessore, corsivo, spaziatura e colori a quelli di partenza *@
+                    <button class="lnk ctl-clear" @onclick="Lib.ClearProofControlsAsync">Clear</button>
                 }
             </div>
-            }
-            <label class="ctl web" for="web"><input type="checkbox" id="web" checked="@Lib.IncludeWeb" @onchange="OnWebToggle" /> include Web (woff)</label>
         </div>
         }
     </header>
@@ -143,7 +119,53 @@
         }
         else
         {
-            <input type="search" id="q" placeholder="Search family or variant" aria-label="Search family" value="@Lib.Query" @oninput="OnQueryInput" />
+            @* i filtri per caratteristica, sopra la ricerca: insieme decidono quali famiglie compaiono qui sotto *@
+            <div class="filters aside-filters" role="group" aria-labelledby="lbl-traits">
+                @* il titolo non si vede (i filtri parlano da soli), ma resta per chi usa un lettore di schermo *@
+                <span class="sr-only" id="lbl-traits">Characteristics</span>
+                <div class="chips">
+                    @* i numeri scorrono alle cifre nuove quando cambiano (ricerca, altri filtri), come nel resto del sito *@
+                    @foreach (var chip in TraitChips)
+                    {
+                        <button @key="chip.Trait" class="chip" aria-pressed="@(chip.Active ? "true" : "false")" disabled="@(chip.Count == 0 && !chip.Active)" @onclick="() => Lib.ToggleFilterAsync(chip.Trait)">
+                            @if (chip.Active)
+                            {
+                                <Icon Name="checkmark" Class="chip-check" />
+                            }
+                            @chip.Label <span class="n"><FlowNumber Value="chip.Count" /></span>
+                        </button>
+                    }
+                    @* i font per il web (woff, woff2): acceso, il catalogo mostra solo loro *@
+                    <button class="chip" aria-pressed="@(Lib.WebOnly ? "true" : "false")" disabled="@(WebCount == 0 && !Lib.WebOnly)" title="Only the web fonts (woff, woff2)" @onclick="ToggleWeb">
+                        @if (Lib.WebOnly)
+                        {
+                            <Icon Name="checkmark" Class="chip-check" />
+                        }
+                        Web <span class="n"><FlowNumber Value="WebCount" /></span>
+                    </button>
+                </div>
+                @if (Lib.Filters != FontTrait.None || Lib.WebOnly)
+                {
+                    <button class="lnk" @onclick="Lib.ClearFiltersAsync">Clear</button>
+                }
+                @if (Lib.ClassificationIsPartial)
+                {
+                    @* i filtri finora leggono solo i nomi: un'icona info spiega cosa vuol dire e porta all'analisi *@
+                    <span class="info-tip">
+                        <button class="info-btn" aria-label="About these filters" aria-describedby="tip-traits"><Icon Name="information" /></button>
+                        <span class="tip" role="tooltip" id="tip-traits">
+                            <b>Based on names only.</b>
+                            For now the filters read just the font and folder names, for example “Serif” or “Mono” in “Plex Mono”,
+                            so some fonts can be missing or in the wrong group.
+                            <button class="lnk" @onclick="Lib.OpenSettings">Analyse the folder</button> to sort them with the data inside each font.
+                        </span>
+                    </span>
+                }
+            </div>
+            @* lo stesso riquadro del testo di prova in alto: bordo squircle, blu al passaggio e mentre si scrive *@
+            <div class="sample-box search-box">
+                <input type="search" id="q" class="sample-input" placeholder="Search family or variant" aria-label="Search family" value="@Lib.Query" @oninput="OnQueryInput" />
+            </div>
             <ul class="fam-list">
                 @foreach (var row in IndexRows)
                 {
@@ -153,7 +175,7 @@
                     }
                     <li>
                         <button aria-current="@IsCurrent(row.Family)" @onclick="() => PickFamily(row.Family)">
-                            <span>@row.Family.Name</span><span class="n">@row.Family.Count(Lib.IncludeWeb)</span>
+                            <span>@row.Family.Name</span><span class="n">@Lib.ShownCount(row.Family)</span>
                         </button>
                         @if (OpenVariants(row.Family) is { Count: > 0 } variants)
                         {
@@ -188,7 +210,7 @@
                     Families, corrections and analysed credits are all here; reconnect the folder to see the typefaces.
                     The browser asks you to pick it again after every reload.
                 </p>
-                <label class="btn" for="pick"><Icon Name="folder-open" /> Reconnect the folder</label>
+                <label class="btn" for="pick"><Icon Name="folder--open" /> Reconnect the folder</label>
             </div>
         }
         @* senza cartella si vede solo la zona in cui trascinarla (nel catalogo), tranne le impostazioni *@
@@ -196,7 +218,6 @@
         {
             case View.Catalog: <CatalogView Version="Lib.Version" /> break;
             case View.Family: <FamilyView Version="Lib.Version" /> break;
-            case View.Compare: <CompareView Version="Lib.Version" /> break;
             case View.Settings: <SettingsView Version="Lib.Version" /> break;
             case View.Credits: <CreditsView /> break;
             case View.Feedback: <FeedbackView Version="Lib.Version" /> break;

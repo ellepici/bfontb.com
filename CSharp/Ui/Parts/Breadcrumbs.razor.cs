@@ -12,7 +12,6 @@ public partial class Breadcrumbs
     /// <summary>Versione dello stato dell'app (vedi FontLibrary.Version).</summary>
     [Parameter] public int Version { get; set; }
 
-    /// <summary>Un passo del percorso; senza azione è il punto in cui ci si trova.</summary>
     /// <summary>Un passo del percorso. Counts: accanto c'è il conteggio animato di famiglie e stili (solo il catalogo).</summary>
     private sealed record Crumb(string Text, Func<Task>? Go = null, string? Note = null, bool Counts = false);
 
@@ -30,30 +29,28 @@ public partial class Breadcrumbs
             case View.Catalog:
                 list.Add(catalog with { Go = null, Note = CatalogNote(), Counts = Lib.StatusMessage is null && !Lib.IsDemo });
                 break;
+            // nella famiglia e nello stile al catalogo riporta già il pulsante "Back to the catalog": il percorso parte dalla famiglia
             case View.Family:
-                list.Add(catalog);
-                // come la pagina della famiglia: se non ne è stata scelta una, la prima dell'elenco
-                list.Add(new Crumb(Lib.CurrentFamily ?? Lib.VisibleFamilies().FirstOrDefault()?.Name ?? "Family"));
+                // come la pagina della famiglia: se non ne è stata scelta una, la prima dell'elenco;
+                // accanto, quante varianti, quanti stili e quanti glifi ha (quelli del suo file più completo)
+                {
+                    var name = Lib.CurrentFamily ?? Lib.VisibleFamilies().FirstOrDefault()?.Name;
+                    var fam = name is null ? null : Lib.Families.GetValueOrDefault(name);
+                    list.Add(new Crumb(name ?? "Family", Note: fam is null ? null : FamilyNote(fam)));
+                }
                 break;
             case View.Style when Lib.CurrentStyle is { } r:
-                list.Add(catalog);
                 list.Add(new Crumb(r.Family.Name, () => { Lib.OpenFamily(r.Family.Name); return Task.CompletedTask; }));
                 if (r.Variant != r.Family.Name) list.Add(new Crumb(r.Variant));
                 list.Add(new Crumb(r.Style.Label));
                 break;
             case View.Style:
-                list.Add(catalog);
                 list.Add(new Crumb("Style"));
-                break;
-            case View.Compare:
-                list.Add(new Crumb("Compare", Note: Lib.Pins.Count == 0 ? null : $"{Lib.Pins.Count} {Fmt.Plural(Lib.Pins.Count, "style", "styles")}"));
                 break;
             case View.Settings:
                 list.Add(new Crumb("Settings"));
                 break;
         }
-        // la cartella aperta: solo per sapere dove si è, non si clicca (per tornare all'inizio c'è "Catalog")
-        if (!Lib.IsDemo) list.Insert(0, new Crumb(Lib.RootName));
         Crumbs = list;
     }
 
@@ -69,7 +66,7 @@ public partial class Breadcrumbs
         var parts = new List<string>();
         var families = Lib.VisibleFamilies().ToList();
         CountFamilies = families.Count;
-        CountStyles = families.Sum(f => f.Count(Lib.IncludeWeb));
+        CountStyles = families.Sum(f => f.Count(false));
         var filters = FontClassifier.All.Where(a => Lib.Filters.HasFlag(a.Trait)).Select(a => a.Label).ToList();
         if (filters.Count > 0) parts.Add("filter " + string.Join(" + ", filters));
         if (Lib.Italic) parts.Add("italics only");
@@ -77,12 +74,25 @@ public partial class Breadcrumbs
         return parts.Count == 0 ? null! : string.Join(" · ", parts);
     }
 
+    /// <summary>"12 variants · 220 styles · 1,034 glyphs": nell'ordine variante, stile, glifi (quelli del file che ne ha di più).</summary>
+    private static string FamilyNote(TypeFamily f)
+    {
+        int variants = f.VariantNames(false).Count(), styles = f.Count(false);
+        var parts = new List<string>
+        {
+            $"{Fmt.N(variants)} {Fmt.Plural(variants, "variant", "variants")}",
+            $"{Fmt.N(styles)} {Fmt.Plural(styles, "style", "styles")}",
+        };
+        if (f.Styles(false).Select(s => s.Info?.Glyphs ?? 0).DefaultIfEmpty(0).Max() is > 0 and var glyphs)
+            parts.Add($"{Fmt.N(glyphs)} {Fmt.Plural(glyphs, "glyph", "glyphs")}");
+        return string.Join(" · ", parts);
+    }
+
     /// <summary>"Back to the catalog", "Back to ABC Marfa"…: dove riporta il pulsante delle impostazioni.</summary>
     private string BackLabel => Lib.ViewBeforeSettings switch
     {
         View.Family when Lib.CurrentFamily is { } f => $"Back to {f}",
         View.Style when Lib.CurrentStyle is { } r => $"Back to {r.Family.Name} {r.Style.Label}",
-        View.Compare => "Back to Compare",
         _ => "Back to the catalog",
     };
 }

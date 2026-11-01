@@ -8,7 +8,11 @@ else
     <div class="fam-head">
         <div class="fam-title">
             <h2>@Current.Name</h2>
-            <span class="sub">@Summary</span>
+            @if (Authors.Length > 0)
+            {
+                @* accanto al nome della famiglia solo gli autori, anche se cambiano da una variante all'altra *@
+                <span class="sub fam-cred">@Authors</span>
+            }
         </div>
         @if (Traits.Count > 0)
         {
@@ -50,16 +54,19 @@ else
             <div class="fam-grid" style="@GridStyle">
                 @foreach (var st in v.Styles)
                 {
-                    <FamilyCard @key="st.Id" Family="Current" Style="st" Note="@CardNote(st)" AaSize="AaSize" OpensStyle="true" />
+                    <FamilyCard @key="st.Id" Family="Current" Style="st" Note="@CardNote(st)" AaShare="AaShare" OpensStyle="true" />
                 }
             </div>
         }
         else
         {
-            @foreach (var st in v.Styles)
-            {
-                <SpecimenRow @key="st.Id" Style="st" Family="@Current.Name" Title="@st.Label" Extra="@WeightNote(st)" />
-            }
+            @* righe come quelle del catalogo: tutte alte uguali, testo su al massimo due righe (vedi .catalog-list in specimens.css) *@
+            <div class="catalog-list" style="@CatalogView.ListStyle(Lib.Size)">
+                @foreach (var st in v.Styles)
+                {
+                    <SpecimenRow @key="st.Id" Style="st" Family="@Current.Name" Title="@st.Label" Extra="@WeightNote(st)" AnimateWeight="true" HideAuthor="true" HideYear="true" />
+                }
+            </div>
         }
     }
 }

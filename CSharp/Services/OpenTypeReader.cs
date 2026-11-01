@@ -25,7 +25,7 @@ public static partial class OpenTypeReader
         var tables = sig == "wOFF" ? WoffTables(data) : SfntTables(data, sig == "ttcf" ? (int)U32(data, 12) : 0);
         var info = new FontInfo { Schema = FontInfo.CurrentSchema };
 
-        if (tables.TryGetValue("name", out var name)) ReadNames(name(), info);
+        var names = tables.TryGetValue("name", out var name) ? ReadNames(name(), info) : [];
         if (tables.TryGetValue("OS/2", out var os2))
         {
             var t = os2();
@@ -41,8 +41,43 @@ public static partial class OpenTypeReader
         }
         if (tables.TryGetValue("post", out var post)) { var t = post(); if (t.Length >= 16) info.FixedPitch = U32(t, 12) != 0; }
         info.IsVariable = tables.ContainsKey("fvar");
+        if (tables.TryGetValue("fvar", out var fvar)) ReadAxes(fvar(), info, names);
         if (tables.TryGetValue("maxp", out var maxp)) { var t = maxp(); if (t.Length >= 6) info.Glyphs = U16(t, 4); }
         return info;
+    }
+
+    /// <summary>
+    /// Tabella fvar: l'intervallo dell'asse del peso (wght), per animare i font variabili dal più sottile al più spesso,
+    /// e l'asse del corsivo (slnt o ital) quando il corsivo sta nello stesso file, con il suo valore più inclinato.
+    /// Intestazione: versione (4), inizio degli assi (2), riservato (2), numero di assi (2), misura di un asse (2);
+    /// ogni asse: etichetta (4), minimo, predefinito e massimo in Fixed 16.16 (4 ciascuno), flag (2), nome (2).
+    /// </summary>
+    private static void ReadAxes(byte[] t, FontInfo info, Dictionary<int, string> names)
+    {
+        info.Axes = "";
+        if (t.Length < 16) return;
+        int off = U16(t, 4), count = U16(t, 8), size = U16(t, 10);
+        double Fixed(int p) => (int)U32(t, p) / 65536.0;
+        for (int i = 0; i < count; i++)
+        {
+            int r = off + i * size;
+            if (size < 16 || r + 16 > t.Length) return;
+            var tag = Tag(t, r);
+            double min = Fixed(r + 4), def = Fixed(r + 8), max = Fixed(r + 12);
+            if (max > min)
+            {
+                // gli assi propri del disegnatore (EXPO, CNTR, MONO…) portano anche il nome scritto nel file ("EXPO=Expose")
+                string item = tag.Any(char.IsLower) || r + 20 > t.Length || !names.TryGetValue(U16(t, r + 18), out var axisName) ? tag : $"{tag}={axisName}";
+                info.Axes = info.Axes.Length == 0 ? item : info.Axes + "|" + item;
+            }
+            if (tag == "wght" && max > min) { info.WghtMin = min; info.WghtMax = max; }
+            else if (tag is "slnt" or "ital" && max > min && info.SlantAxis is null)
+            {
+                // l'estremo più lontano dal valore normale: slnt di solito negativo (-14), ital di solito 1 (a volte negativo)
+                info.SlantAxis = tag;
+                info.SlantValue = Math.Abs(min - def) >= Math.Abs(max - def) ? min : max;
+            }
+        }
     }
 
     // ---- table directories ----
@@ -98,9 +133,10 @@ public static partial class OpenTypeReader
 
     // ---- name table ----
 
-    private static void ReadNames(byte[] t, FontInfo info)
+    /// <summary>Legge i nomi del file nei campi di info; restituisce tutti i nomi per numero (servono ai nomi degli assi).</summary>
+    private static Dictionary<int, string> ReadNames(byte[] t, FontInfo info)
     {
-        if (t.Length < 6) return;
+        if (t.Length < 6) return [];
         int count = U16(t, 2), strOff = U16(t, 4);
         var best = new Dictionary<int, (int Score, string Text)>();
         for (int i = 0; i < count; i++)
@@ -147,6 +183,7 @@ public static partial class OpenTypeReader
                     info.FoundryGuess = AllRightsRe().Replace(guess, "").Trim();
             }
         }
+        return best.ToDictionary(kv => kv.Key, kv => kv.Value.Text);
     }
 
     // ---- helpers ----

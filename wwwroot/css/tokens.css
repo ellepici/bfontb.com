@@ -9,6 +9,10 @@
   --proof-soft: #e3e6fb;
   --star: #c7461f;
   --ok: #2f7d4f;
+  /* l'ombra leggera di pulsanti e tendine: la stessa delle schede del catalogo al passaggio del mouse */
+  --btn-shadow: 0 4px 12px rgba(0, 0, 0, .10);
+  /* il colore dei testi di prova quando non se ne sceglie uno (auto): nero pieno sul chiaro, bianco pieno sullo scuro */
+  --spec-auto-ink: #000000;
   /* Un solo carattere neutro per tutta l'interfaccia, Inter (rsms.me/inter): la gerarchia la fanno peso, corpo e taglio ottico.
      --f-display: titoli (Inter Display, scelto da solo dal taglio ottico ai corpi grandi); --f-data: numeri e dati, con cifre tabellari. */
   --f-ui: "Inter", "Helvetica Neue", Arial, sans-serif;
@@ -26,6 +30,7 @@
   :root:not([data-theme="light"]) {
     --paper: #111214; --sheet: #18191c; --ink: #ecece6; --muted: #9a9d95; --rule: #2c2e31;
     --proof: #8f9cff; --proof-soft: #23284a; --star: #ff8a5c; --ok: #6fcf97;
+    --spec-auto-ink: #ffffff;
     color-scheme: dark;
   }
 }
@@ -33,6 +38,7 @@
 :root[data-theme="dark"] {
   --paper: #111214; --sheet: #18191c; --ink: #ecece6; --muted: #9a9d95; --rule: #2c2e31;
   --proof: #8f9cff; --proof-soft: #23284a; --star: #ff8a5c; --ok: #6fcf97;
+    --spec-auto-ink: #ffffff;
   color-scheme: dark;
 }
 
@@ -67,7 +73,7 @@ h1, h2, h3, h4 { font-family: var(--f-display); font-optical-sizing: auto; lette
 input:focus, select:focus { outline: 2px solid var(--proof); outline-offset: -2px; }
 [hidden] { display: none !important; }
 
-/* Icone Phosphor: grandi quanto il testo, nel suo colore */
+/* Icone (Carbon di IBM; Phosphor solo per i loghi dei social): grandi quanto il testo, nel suo colore */
 .ph { width: 1em; height: 1em; flex: none; display: inline-block; vertical-align: -0.14em; }
 .ph.inline { width: 1.05em; height: 1.05em; }
 

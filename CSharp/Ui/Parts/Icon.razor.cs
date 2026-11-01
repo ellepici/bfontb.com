@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace Bfontb.Ui.Parts;
 
-/// <summary>Icona Phosphor per nome (es. "star", "star-fill", "caret-down").</summary>
+/// <summary>Icona Carbon per nome, come si chiama nella libreria (es. "settings", "text--italic", "chevron--down").</summary>
 public partial class Icon
 {
     [Parameter, EditorRequired] public string Name { get; set; } = "";

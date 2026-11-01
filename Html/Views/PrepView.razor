@@ -10,7 +10,7 @@
     {
         <div class="card">
             <h3>No folder open</h3>
-            <p>Choose a folder from Menu › Change folder, or drag it here. Then come back to Settings to analyse it.</p>
+            <p>Choose a folder with the folder button at the top right, or drag it here. Then come back to Settings to analyse it.</p>
         </div>
     }
     else
@@ -26,12 +26,12 @@
             </div>
             @if (Folder.Ready)
             {
-                <p><span class="verdict ok"><Icon Name="check-circle" /> Looks already sorted by family</span></p>
+                <p><span class="verdict ok"><Icon Name="checkmark--outline" /> Looks already sorted by family</span></p>
                 <p>You can use it as it is. If the folders don’t match the families, though, the analysis reads the name written inside each font and suggests a better order.</p>
             }
             else
             {
-                <p><span class="verdict warn"><Icon Name="warning-circle" /> The files don’t seem sorted by family</span></p>
+                <p><span class="verdict warn"><Icon Name="warning" /> The files don’t seem sorted by family</span></p>
                 <p>The folders aren’t enough to tell the families apart. Analyse the fonts: the page reads the family name, style, weight and width that the foundry wrote into each file.</p>
             }
         </div>

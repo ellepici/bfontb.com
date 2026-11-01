@@ -30,6 +30,9 @@ public partial class StyleView
     private bool showCredits;
 
     private void ToggleCredits() => showCredits = !showCredits;
+
+    // Esc chiude i crediti, come le altre tendine
+    private void OnCredKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e) { if (e.Key == "Escape") showCredits = false; }
     private FontLibrary.StyleRef? Ref;
     private FontStyle? loadedFor;
     private GlyphSet? Set;
@@ -64,11 +67,13 @@ public partial class StyleView
     /// <summary>Varianti della famiglia e stili della variante, nello stesso ordine della pagina della famiglia.</summary>
     private void Neighbours(FontLibrary.StyleRef r)
     {
-        var names = r.Family.VariantNames(Lib.IncludeWeb || r.Variant == "Web").ToList();
+        var names = r.Family.VariantNames(r.Variant == "Web").ToList();
         VariantList = names.Select(v => (v, r.Family.Variants[v].Count)).ToList();
         VariantStyles = Sorted(r.Family.Variants[r.Variant]).ToList();
         VariantOptions = VariantList.Select(v => new DropdownOption(v.Name, v.Name, $"{v.Count} {Fmt.Plural(v.Count, "style", "styles")}")).ToList();
-        StyleOptions = VariantStyles.Select(s => new DropdownOption(s.Path, s.Label)).ToList();
+        // gli stessi nomi della tendina del catalogo, mai due uguali (vedi StyleLabels)
+        var labels = StyleLabels.Distinct(VariantStyles);
+        StyleOptions = VariantStyles.Select(s => new DropdownOption(s.Path, labels[s].Text, labels[s].Format)).ToList();
     }
 
     private void Open(FontStyle? s)
@@ -84,14 +89,20 @@ public partial class StyleView
 
     private void OnStyle(string path) => Open(VariantStyles.FirstOrDefault(s => s.Path == path));
 
-    private void Show(Tab t) => tab = t;
+    private void Show(Tab t)
+    {
+        tab = t;
+        Lib.SetStyleTab(t == Tab.Glyphs);   // i comandi in alto si accendono o si spengono di conseguenza
+    }
+
+    // la pagina si apre sempre sui caratteri: lo sa anche la barra dei comandi
+    protected override void OnInitialized() => Lib.SetStyleTab(true);
     private string TabSel(Tab t) => tab == t ? "true" : "false";
 
     private bool Drawable(FontStyle s) => s.IsDemo || s.Status == LoadStatus.Ready;
 
-    private string PinnedAttr(FontStyle s) => Lib.Pins.Contains(s.Path) ? "true" : "false";
 
-    private static string PathLine(FontStyle s) => s.Path + (s.Size > 0 ? " · " + Fmt.Kb(s.Size) : "");
+    private static string FileLine(FontStyle s) => s.FileName + (s.Size > 0 ? " · " + Fmt.Kb(s.Size) : "");
 
     // l'ultimo stile di cui si sono letti i caratteri: si continua a mostrarlo mentre si legge il successivo
     private GlyphSet? lastSet;
@@ -111,4 +122,10 @@ public partial class StyleView
 
     private string StyleAt(FontStyle s, int size) =>
         $"{s.Css};font-size:{size}px;letter-spacing:{(Lib.Tracking / 1000.0).ToString(CultureInfo.InvariantCulture)}em";
+
+    // "ABC Asfalt Variable Variable" no: se la variante dice già Variable, lo stile mostra solo il resto (Italic o niente)
+    private string ShownLabel(FontStyle s) =>
+        Ref is { } r && r.Variant.Contains("Variable", StringComparison.OrdinalIgnoreCase) && s.Label.StartsWith("Variable", StringComparison.Ordinal)
+            ? s.Label["Variable".Length..].Trim()
+            : s.Label;
 }

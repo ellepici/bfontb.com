@@ -9,12 +9,16 @@ let app = null;               // DotNetObjectReference di FontLibrary
 export function init(dotnetRef, input) {
   app = dotnetRef;
   routerInit();
+  mergedPops();
   // Esc fa "indietro": il pulsante con la freccia nella barra del percorso (impostazioni, famiglia, stile).
   // Non quando serve a un campo, a una tendina, al menu o ai crediti aperti.
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape' || e.defaultPrevented) return;
-    if (e.target.closest && e.target.closest('input, textarea, select, .dd, .menu')) return;
-    if (document.querySelector('.menu-pop, .cred-pop, .cm-pop')) return;
+    // crediti aperti e attenzione altrove nella pagina: Esc li chiude, come le tendine (dentro il riquadro ci pensa StyleView)
+    const cred = document.querySelector('.cred-pop');
+    if (cred && !(e.target.closest && e.target.closest('.cred-dd'))) { cred.parentElement.querySelector('.cred-btn')?.click(); return; }
+    if (e.target.closest && e.target.closest('input, textarea, select, .dd, .menu, .cm, .fold, .cred-dd')) return;
+    if (document.querySelector('.menu-pop, .cred-pop, .cm-pop, .fold-pop')) return;
     document.querySelector('.crumbs .back')?.click();
   });
   input.addEventListener('change', () => {
@@ -541,4 +545,299 @@ if (typeof document !== 'undefined') {
   new MutationObserver(queueFit).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'style'] });
   addEventListener('resize', queueFit);
   document.fonts?.addEventListener?.('loadingdone', queueFit);
+}
+
+// ---- barre HSL dei colori (ColorMenu): tinta 0–360, saturazione e luminosità 0–100, ognuna con il suo valore da scrivere ----
+// Si trascinano con il mouse (o il dito) e si regolano con le frecce (Shift: passi da 10); il colore va a C# (OnWheel)
+// al massimo ogni 60 ms mentre si trascina, e sempre alla fine, così il resto della pagina non si ridisegna a ogni pixel.
+const hexToHsl = hex => {
+  const n = parseInt(hex.slice(1), 16), r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min, l = (max + min) / 2;
+  let h = 0;
+  if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  const s = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  return { h: Math.round((h * 60 + 360) % 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+};
+const hslToHex = (h, s, l) => {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l), f = n => { const k = (n + h / 30) % 12; return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); };
+  return '#' + [f(0), f(8), f(4)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
+};
+// Un colore del tema (variabile CSS) in esadecimale: serve a ColorMenu per mostrare il colore "auto"
+// "#a1b2c3", "#abc" o "rgb(161, 178, 195)" → "#A1B2C3"; null se non è un colore
+function toHex(v) {
+  v = String(v || '').trim();
+  let m = v.match(/^#([0-9a-f]{6})/i);
+  if (m) return '#' + m[1].toUpperCase();
+  m = v.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i);
+  if (m) return '#' + (m[1] + m[1] + m[2] + m[2] + m[3] + m[3]).toUpperCase();
+  m = v.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+  return m ? '#' + [m[1], m[2], m[3]].map(x => (+x).toString(16).padStart(2, '0')).join('').toUpperCase() : null;
+}
+
+export function cssColor(name) {
+  const v = getComputedStyle(document.querySelector('.app') || document.documentElement).getPropertyValue(name).trim();
+  if (/^#[0-9a-f]{3,8}$/i.test(v)) return v.slice(0, 7).toUpperCase();
+  const m = v.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i);
+  return m ? '#' + [m[1], m[2], m[3]].map(x => (+x).toString(16).padStart(2, '0')).join('').toUpperCase() : null;
+}
+
+// I campi del codice dei colori mentre li si scrive. Esadecimale: solo cifre esadecimali, maiuscole, al massimo sei;
+// il # davanti è già disegnato fuori dal campo: se lo si scrive o lo si incolla ("#ff00aa") si toglie da solo.
+// R, G, B: solo cifre, da 0 a 255 (un 300 diventa 255).
+const isCode = el => el instanceof HTMLInputElement && (el.classList.contains('cm-hex') || el.classList.contains('cm-ch'));
+document.addEventListener('input', e => {
+  const el = e.target;
+  if (!isCode(el)) return;
+  const hex = el.classList.contains('cm-hex');
+  const before = el.value, caret = el.selectionStart ?? before.length;
+  const clean = s => hex ? s.replace(/[^0-9a-f]/gi, '').toUpperCase() : s.replace(/\D/g, '');
+  let v = clean(before).slice(0, hex ? 6 : 3);
+  if (!hex && v.length > 0) v = String(Math.min(255, parseInt(v, 10)));
+  if (v === before) return;
+  const pos = Math.min(clean(before.slice(0, caret)).length, v.length);
+  el.value = v;
+  el.setSelectionRange(pos, pos);
+  el.dataset.fixed = '1';   // Safari, dopo un valore cambiato da qui, non manda più "change": lo mandiamo noi (sotto)
+}, true);
+const commitCode = el => {
+  if (!isCode(el) || !el.dataset.fixed) return;
+  delete el.dataset.fixed;
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+};
+document.addEventListener('keydown', e => {
+  const el = e.target;
+  if (e.key === 'Enter') { commitCode(el); return; }
+  // nei campi R, G, B le frecce su e giù cambiano il valore di 1 (Shift: 10) e lo applicano subito
+  if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || !(el instanceof HTMLInputElement) || !el.classList.contains('cm-ch')) return;
+  e.preventDefault(); e.stopPropagation();
+  const step = (e.shiftKey ? 10 : 1) * (e.key === 'ArrowUp' ? 1 : -1);
+  el.value = String(Math.min(255, Math.max(0, (parseInt(el.value, 10) || 0) + step)));
+  delete el.dataset.fixed;
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+}, true);
+document.addEventListener('blur', e => commitCode(e.target), true);
+// un clic in un campo del codice ne seleziona tutto il contenuto, pronto da riscrivere (dopo il clic: Safari altrimenti la toglie)
+document.addEventListener('focus', e => { if (isCode(e.target)) setTimeout(() => e.target.select(), 0); }, true);
+
+export function colorWheel(root, dotnet, hex, isInk) {
+  if (!root) return;
+  const c = hexToHsl(hex);
+  const max = { h: 360, s: 100, l: 100 };
+  const bars = [...root.querySelectorAll('.cw-bar')];
+  let last = 0, timer = 0;
+  // il pomello non esce dalla barra: il suo centro va da metà altezza a sinistra a metà altezza a destra, e la sfumatura
+  // si stende sullo stesso tratto (sotto il pomello c'è sempre il suo colore)
+  const inset = bar => bar.clientHeight / 2;
+  const grad = (bar, stops) => {
+    const r = inset(bar), n = stops.length - 1;
+    return `linear-gradient(to right, ${stops.map((s, i) => `${s} calc(${r}px + (100% - ${2 * r}px) * ${i / n})`).join(', ')})`;
+  };
+  const draw = () => {
+    const { h, s, l } = c;
+    for (const bar of bars) {
+      const k = bar.dataset.k;
+      bar.style.background = grad(bar, k === 'h' ? [0, 60, 120, 180, 240, 300, 360].map(x => `hsl(${x} 100% 50%)`)
+        : k === 's' ? [`hsl(${h} 0% ${l}%)`, `hsl(${h} 100% ${l}%)`]
+        : ['#000', `hsl(${h} ${s}% 50%)`, '#fff']);
+      const r = inset(bar);
+      const knob = bar.querySelector('.cw-knob');
+      knob.style.left = `calc(${r}px + (100% - ${2 * r}px) * ${c[k] / max[k]})`;
+      knob.style.background = hslToHex(h, s, l);
+      bar.setAttribute('aria-valuenow', String(c[k]));
+      const box = bar.parentElement.querySelector('.cw-val');
+      if (box && document.activeElement !== box) box.value = String(c[k]);   // mentre ci si scrive non si cambia sotto le dita
+    }
+  };
+  // exact: un colore preso dal contagocce va mandato così com'è (passando da HSL, arrotondato, cambierebbe di poco)
+  let exact = null;
+  const send = (final, hex) => {
+    if (hex !== undefined) exact = hex;
+    clearTimeout(timer);
+    const now = performance.now();
+    if (!final && now - last < 60) { timer = setTimeout(() => send(true), 60); return; }
+    last = now;
+    dotnet.invokeMethodAsync('OnWheel', exact ?? hslToHex(c.h, c.s, c.l), isInk).catch(() => { });
+    exact = null;
+  };
+  // il contagocce: un colore preso dallo schermo. Dove c'è (Chrome, Edge) si usa EyeDropper; Safari non ce l'ha (vedi sotto)
+  const take = (v, final) => {
+    const h = toHex(v); if (!h) return;
+    Object.assign(c, hexToHsl(h)); draw(); send(final, h);
+  };
+  // il clic arriva direttamente sul campo colore trasparente sopra l'icona (ColorMenu.razor). Dove c'è EyeDropper quel
+  // clic si ferma e si apre il contagocce del browser; altrimenti (Safari) si apre il selettore di macOS, il cui pannello
+  // ("Mostra colori…") ha la lente per prendere un colore da tutto lo schermo
+  const eye = root.closest('.cm-pop')?.querySelector('.cm-eye-in');
+  if (eye) {
+    eye.onpointerdown = eye.onfocus = () => { eye.value = hslToHex(c.h, c.s, c.l).toLowerCase(); };   // parte dal colore attuale
+    eye.onclick = e => {
+      if (!('EyeDropper' in window)) return;
+      e.preventDefault();
+      new window.EyeDropper().open().then(r => take(r.sRGBHex, true)).catch(() => { });   // Esc: nessun colore
+    };
+    eye.oninput = () => take(eye.value, false);   // mentre si sceglie nel pannello, il colore cambia dal vivo
+    eye.onchange = () => take(eye.value, true);
+  }
+  for (const bar of bars) {
+    const k = bar.dataset.k;
+    const read = e => {
+      const rc = bar.getBoundingClientRect(), r = inset(bar);
+      c[k] = Math.round(Math.min(1, Math.max(0, (e.clientX - rc.left - r) / Math.max(1, rc.width - 2 * r))) * max[k]);
+    };
+    bar.onpointerdown = e => {
+      e.preventDefault(); bar.focus(); bar.setPointerCapture(e.pointerId);
+      read(e); draw(); send(false);
+      bar.onpointermove = m => { read(m); draw(); send(false); };
+      bar.onpointerup = bar.onpointercancel = () => { bar.onpointermove = null; send(true); };
+    };
+    // il valore scritto a mano: solo cifre, entro il massimo; si applica con Invio o uscendo dalla casella;
+    // le frecce su e giù lo cambiano di 1 (Shift: 10) e lo applicano subito
+    const box = bar.parentElement.querySelector('.cw-val');
+    if (box) {
+      const commit = () => {
+        const n = parseInt(box.value, 10);
+        if (!Number.isNaN(n)) { c[k] = Math.min(max[k], Math.max(0, n)); send(true); }
+        box.value = String(c[k]); draw();
+      };
+      box.oninput = () => {
+        const v = box.value.replace(/\D/g, '').slice(0, 3);
+        const fixed = v.length ? String(Math.min(max[k], parseInt(v, 10))) : '';
+        if (fixed !== box.value) box.value = fixed;
+      };
+      box.onchange = commit;
+      box.onblur = commit;   // Safari, dopo un valore corretto da qui, non manda "change"
+      box.onkeydown = e => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); box.select(); return; }
+        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+        e.preventDefault(); e.stopPropagation();
+        const step = e.shiftKey ? 10 : 1;
+        c[k] = Math.min(max[k], Math.max(0, (parseInt(box.value, 10) || 0) + (e.key === 'ArrowUp' ? step : -step)));
+        box.value = String(c[k]); draw(); send(false);
+      };
+      box.onfocus = () => setTimeout(() => box.select(), 0);   // dopo il clic, che altrimenti toglie la selezione (Safari)
+    }
+    // da tastiera: le frecce spostano il pomello di 1 (Shift: 10)
+    bar.onkeydown = e => {
+      const step = e.shiftKey ? 10 : 1;
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') c[k] = Math.max(0, c[k] - step);
+      else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') c[k] = Math.min(max[k], c[k] + step);
+      else return;
+      e.preventDefault(); e.stopPropagation(); draw(); send(false);
+    };
+  }
+  draw();
+}
+
+// ---- Tendine "attaccate": il pulsante e il riquadro che scende diventano una forma sola ----
+// Un unico contorno SVG (angoli squircle, raccordo concavo dove la linguetta del pulsante incontra il riquadro)
+// disegnato sotto pulsante e riquadro, che intanto perdono bordo e fondo (classe "merged" sul contenitore).
+// Vale per ogni tendina: [riquadro, contenitore, pulsante]. Funziona da solo: guarda quando un riquadro compare.
+const MERGED = [
+  ['.dd-list', '.dd', ':scope > .dd-btn, :scope > .dd-field'],
+  ['.cm-pop', '.cm', ':scope > .cm-btn'],
+  ['.menu-pop', '.menu', ':scope > .menu-btn'],
+  ['.fold-pop', '.fold', ':scope > .fold-btn'],
+  ['.cred-pop', '.cred-dd', ':scope > .cred-btn'],
+];
+const SQ_N = 4;            // superellisse come gli squircle dei pulsanti (squircle.css)
+const merged = new Map();  // riquadro → { wrap, trig, svg, path, filter, ro }
+let mergeIds = 0;          // per dare a ogni ombra un id suo
+
+function mergedPops() {
+  // l'osservatore risponde prima che la pagina venga ridisegnata: il riquadro compare già attaccato, senza scatti
+  new MutationObserver(syncMerged).observe(document.body, { childList: true, subtree: true });
+  window.addEventListener('resize', () => merged.forEach(drawMerged));
+}
+
+function syncMerged() {
+  // via le forme dei riquadri chiusi
+  for (const [pop, m] of merged) {
+    if (pop.isConnected) continue;
+    m.ro.disconnect(); m.svg.remove(); m.wrap.classList.remove('merged'); merged.delete(pop);
+  }
+  for (const [popSel, wrapSel, trigSel] of MERGED) {
+    for (const pop of document.querySelectorAll(popSel)) {
+      if (merged.has(pop)) continue;
+      const wrap = pop.parentElement;
+      if (!wrap || !wrap.matches(wrapSel)) continue;
+      const trig = wrap.querySelector(trigSel);
+      if (!trig) continue;
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'merge-shape'); svg.setAttribute('aria-hidden', 'true');
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      // l'ombra della tendina aperta (la stessa dei pulsanti, --btn-shadow): un filtro SVG sul contorno,
+      // non un filter CSS sull'svg, che in Safari taglierebbe tutta la forma (l'svg è largo 1px e il disegno sta fuori)
+      const fid = 'msh' + (++mergeIds);
+      const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+      filter.setAttribute('id', fid); filter.setAttribute('filterUnits', 'userSpaceOnUse');
+      filter.setAttribute('color-interpolation-filters', 'sRGB');
+      const drop = document.createElementNS('http://www.w3.org/2000/svg', 'feDropShadow');
+      drop.setAttribute('dx', '0'); drop.setAttribute('dy', '4'); drop.setAttribute('stdDeviation', '6');
+      drop.setAttribute('flood-color', '#000'); drop.setAttribute('flood-opacity', '0.10');
+      filter.appendChild(drop);
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      defs.appendChild(filter);
+      svg.appendChild(defs);
+      path.setAttribute('filter', `url(#${fid})`);
+      svg.appendChild(path);
+      wrap.classList.add('merged');
+      wrap.insertBefore(svg, wrap.firstChild);
+      const m = { wrap, trig, pop, svg, path, filter, ro: new ResizeObserver(() => drawMerged(m)) };
+      m.ro.observe(pop); m.ro.observe(trig);
+      merged.set(pop, m);
+      drawMerged(m);
+    }
+  }
+}
+
+function drawMerged(m) {
+  const w = m.wrap.getBoundingClientRect();
+  const rel = r => ({ l: r.left - w.left, r: r.right - w.left, t: r.top - w.top, b: r.bottom - w.top });
+  const t = rel(m.trig.getBoundingClientRect()), p = rel(m.pop.getBoundingClientRect());
+  // la tendina dentro il riquadro del testo di prova: la linguetta arriva fino al bordo del riquadro
+  if (m.trig.closest('.in-box')) { t.t -= 1; t.l -= 1; t.b += 1; }
+  const tabH = t.b - t.t;
+  const rT = tabH >= 30 ? 12 : 10, rP = 14, rC = 8;   // raggi: linguetta, riquadro, raccordo concavo
+  // se il riquadro si aprisse verso l'alto si lavora a specchio
+  const up = p.b <= t.t + tabH / 2;
+  const fy = up ? (y => -y) : (y => y);
+  const tt = up ? -t.b : t.t, pj = up ? -p.b : p.t, pb = up ? -p.t : p.b;
+  // mezzo pixel dentro: il tratto da 1px cade esattamente dove stava il bordo
+  const h = 0.5;
+  let tl = t.l + h, tr = t.r - h, pl = p.l + h, pr = p.r - h;
+  // un riquadro appena più largo del pulsante darebbe un gradino minuscolo: allora è la linguetta ad allargarsi
+  if (Math.abs(pl - tl) < 3) pl = tl; else if (tl - pl > 0 && tl - pl < 24) tl = pl;
+  if (Math.abs(pr - tr) < 3) pr = tr; else if (pr - tr > 0 && pr - tr < 24) tr = pr;
+  const T = tt + h, J = pj, B = pb - h;
+  let pts = [[tl, T], [tr, T], [tr, J], [pr, J], [pr, B], [pl, B], [pl, J], [tl, J]];
+  // via i punti doppi e quelli in mezzo a un lato dritto
+  pts = pts.filter((q, i, a) => { const n = a[(i + 1) % a.length]; return Math.abs(q[0] - n[0]) > .01 || Math.abs(q[1] - n[1]) > .01; });
+  pts = pts.filter((q, i, a) => {
+    const a0 = a[(i - 1 + a.length) % a.length], a2 = a[(i + 1) % a.length];
+    return Math.abs((q[0] - a0[0]) * (a2[1] - q[1]) - (q[1] - a0[1]) * (a2[0] - q[0])) > .01;
+  });
+  const e = 2 / SQ_N, steps = 12;
+  let d = '';
+  pts.forEach((v, i) => {
+    const a = pts[(i - 1 + pts.length) % pts.length], b = pts[(i + 1) % pts.length];
+    const l1 = Math.hypot(v[0] - a[0], v[1] - a[1]), l2 = Math.hypot(b[0] - v[0], b[1] - v[1]);
+    const d1 = [(v[0] - a[0]) / l1, (v[1] - a[1]) / l1], d2 = [(b[0] - v[0]) / l2, (b[1] - v[1]) / l2];
+    const convex = d1[0] * d2[1] - d1[1] * d2[0] > 0;
+    let r = !convex ? rC : (Math.abs(v[1] - T) < .01 ? rT : (Math.abs(v[1] - J) < .01 && (v[0] === tl || v[0] === tr) && !(v[0] === pl || v[0] === pr)) ? rT : rP);
+    r = Math.min(r, l1 / 2, l2 / 2);
+    const c = [v[0] - d1[0] * r + d2[0] * r, v[1] - d1[1] * r + d2[1] * r];
+    for (let k = 0; k <= steps; k++) {
+      const th = (k / steps) * Math.PI / 2;
+      const cs = Math.pow(Math.cos(th), e), sn = Math.pow(Math.sin(th), e);
+      const x = c[0] - d2[0] * r * cs + d1[0] * r * sn, y = c[1] - d2[1] * r * cs + d1[1] * r * sn;
+      d += (d ? 'L' : 'M') + x.toFixed(2) + ',' + fy(y).toFixed(2);
+    }
+  });
+  m.path.setAttribute('d', d + 'Z');
+  // la zona dell'ombra: tutta la forma con un margine per la sfocatura
+  const x0 = Math.min(t.l, p.l) - 40, x1 = Math.max(t.r, p.r) + 40;
+  const y0 = Math.min(fy(T), fy(B), fy(J)) - 40, y1 = Math.max(fy(T), fy(B), fy(J)) + 50;
+  m.filter.setAttribute('x', x0); m.filter.setAttribute('y', y0);
+  m.filter.setAttribute('width', x1 - x0); m.filter.setAttribute('height', y1 - y0);
 }

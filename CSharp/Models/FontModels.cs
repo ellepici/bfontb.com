@@ -23,10 +23,34 @@ public sealed class FontStyle
     public FontFile? File { get; init; }
     public string Path { get; init; } = "";
     public string FileName { get; init; } = "";
+
+    /// <summary>Il formato del file in maiuscolo, dall'estensione: "OTF", "TTF", "WOFF2"… (vuoto se manca).</summary>
+    public string Format
+    {
+        get
+        {
+            int dot = FileName.LastIndexOf('.');
+            return dot > 0 && dot < FileName.Length - 1 ? FileName[(dot + 1)..].ToUpperInvariant() : "";
+        }
+    }
     public string Label { get; set; } = "";
     public int Weight { get; set; } = 400;
     public bool Italic { get; set; }
     public FontInfo? Info { get; set; }
+
+    /// <summary>Font variabile dritto che ha il corsivo dentro di sé (asse slnt o ital): con Italic acceso vale come corsivo.</summary>
+    public bool SlantsToItalic => !Italic && Info is { SlantAxis: not null, SlantValue: not null };
+
+    /// <summary>Nelle tendine del catalogo: la scelta "corsivo" di un variabile che lo ha dentro è il suo percorso più questo segno.</summary>
+    public const string ItalicMark = "#italic";
+
+    /// <summary>Dritto o corsivo, contando anche il corsivo dentro un variabile.</summary>
+    public bool HasItalic => Italic || SlantsToItalic;
+
+    /// <summary>L'impostazione che rende corsivo un variabile, es. "slnt" -14; null se non serve.</summary>
+    public string? ItalicVariation => SlantsToItalic
+        ? $"\"{Info!.SlantAxis}\" {Info.SlantValue!.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}"
+        : null;
     public LoadStatus Status { get; set; } = LoadStatus.Idle;
     public string? FaceName { get; set; }
     public bool IsWeb { get; init; }
@@ -127,8 +151,19 @@ public sealed class TypeFamily(string name)
         int best = scored.Max(x => x.Score);
         if (best == 0) return Representative();
         return scored.Where(x => x.Score == best).Select(x => x.Style)
-            .OrderBy(s => s.Italic).ThenBy(s => Math.Abs(s.Weight - 400)).ThenBy(s => s.FileName.Length).First();
+            .OrderBy(s => VariantRank(VariantOf(s))).ThenBy(s => s.Italic).ThenBy(s => Math.Abs(s.Weight - 400)).ThenBy(s => s.FileName.Length).First();
     }
+
+    private string VariantOf(FontStyle s) => Variants.First(kv => kv.Value.Contains(s)).Key;
+
+    // le varianti per altri alfabeti (Hebrew, Arabic, Cyrillic, Greek…): nel catalogo la famiglia si mostra con quella principale
+    private static readonly System.Text.RegularExpressions.Regex ScriptWords = new(
+        @"\b(Arabic|Hebrew|Cyrillic|CYR|Greek|GRK|Thai|Devanagari|Hindi|Bengali|Tamil|Armenian|Georgian|Japanese|JP|Korean|KR|Chinese|SC|TC|Hangul|Khmer|Lao|Ethiopic)\b",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+    /// <summary>0 la variante con il nome della famiglia, 1 le altre, 2 quelle per un altro alfabeto.</summary>
+    private int VariantRank(string variant) =>
+        variant == Name ? 0 : ScriptWords.IsMatch(variant[Math.Min(Name.Length, variant.Length)..]) ? 2 : 1;
 }
 
 /// <summary>Le correzioni dell'utente alla proposta dell'analisi.</summary>
@@ -159,7 +194,7 @@ public sealed class Proposal
 public enum OrgMode { Folders, Analysis }
 
 /// <summary>Le pagine dell'app. Settings contiene aspetto e preparazione della cartella (prima "Prep": stessa posizione, così la vista salvata resta valida).</summary>
-public enum View { Catalog, Family, Compare, Settings, Style, Credits, Feedback }
+public enum View { Catalog, Family, Settings, Style, Credits, Feedback }
 
 /// <summary>La pagina Feedback: segnalare un problema o proporre un'idea.</summary>
 public enum FeedbackKind { Bug, Feature }

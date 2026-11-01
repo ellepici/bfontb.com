@@ -24,29 +24,43 @@
 
 @supports (-webkit-mask-box-image: none) {
   :where(.btn, .dd-btn:not(.in-box .dd-btn), .dd-field, .tog-btn, .seg, .layout-switch, .sv-tabs, .seg button, .layout-switch button, .tab,
-         .crumbs .back, .icon-btn, .fcard .fc-step, .gx-nav, .landing-open, .cm-sw) {
+         .crumbs .back, .fold-btn, .icon-btn, .fcard .fc-step, .gx-nav, .landing-open, .cm-sw) {
     --sq-b: transparent; --sq-bc: transparent;
     position: relative; -webkit-mask-box-image: var(--sq-f);
   }
   :where(.btn, .dd-btn:not(.in-box .dd-btn), .dd-field, .tog-btn, .seg, .layout-switch, .sv-tabs, .seg button, .layout-switch button, .tab,
-         .crumbs .back, .icon-btn, .fcard .fc-step, .gx-nav, .landing-open, .cm-sw)::after {
+         .crumbs .back, .fold-btn, .icon-btn, .fcard .fc-step, .gx-nav, .landing-open, .cm-sw)::after {
     content: ""; position: absolute; inset: calc(-1 * var(--sq-w, 1px)); pointer-events: none;
     background: var(--sq-bc); -webkit-mask-box-image: var(--sq-ring);
   }
+  /* l'ombra delle schede del catalogo (quella che hanno al passaggio del mouse) anche sui pulsanti e sulle tendine (non sui pulsanti dentro un gruppo).
+     Una maschera taglierebbe l'ombra: questi pulsanti non ne hanno, il fondo ha un raggio tondo che coincide con la superellisse
+     (--sq-rr, stesso rientro a 45°) e il bordo squircle lo disegna ::after, che ha la sua maschera */
+  :where(.btn, .dd-btn:not(.in-box .dd-btn), .dd-field, .tog-btn, .seg, .layout-switch, .sv-tabs, .crumbs .back, .fold-btn, .icon-btn, .gx-nav, .landing-open) {
+    -webkit-mask-box-image: none; border-radius: var(--sq-rr, 6.5px) !important; transition: box-shadow .12s;
+  }
+  /* l'ombra compare solo passandoci sopra e mentre si preme (o finché la sua tendina è aperta) */
+  :where(.btn, .dd-btn:not(.in-box .dd-btn), .dd-field, .tog-btn, .seg, .layout-switch, .sv-tabs, .crumbs .back, .fold-btn, .icon-btn, .gx-nav, .landing-open):is(:hover, :active, [aria-expanded=true], .open):where(:not(:disabled, :has(:disabled))),
+  :where(.dd-field:focus-within) {
+    box-shadow: var(--btn-shadow);
+  }
+  /* le voci delle tendine e del menu: angoli squircle concentrici al riquadro (raggio 14 meno i 4px di margine e il bordo),
+     così la prima e l'ultima, evidenziate, seguono la curva del riquadro */
+  :where(.dd-opt, .menu-item) { -webkit-mask-box-image: var(--sqf10); }
   /* il fuoco da tastiera: il bordo diventa blu correttore e più spesso, lungo la stessa curva */
-  :is(.btn, .dd-btn:not(.in-box .dd-btn), .tog-btn, .seg button, .layout-switch button, .tab, .crumbs .back, .icon-btn, .fcard .fc-step, .gx-nav, .landing-open):focus-visible,
+  :is(.btn, .dd-btn:not(.in-box .dd-btn), .tog-btn, .seg button, .layout-switch button, .tab, .crumbs .back, .fold-btn, .icon-btn, .fcard .fc-step, .gx-nav, .landing-open):focus-visible,
   .dd-field:focus-within {
     outline: none; --sq-bc: var(--proof) !important; --sq-ring: var(--sq-ringf);
   }
 
   /* i raggi: 12 per i controlli alti 30–32px, 10 per quelli da 24–28, 14 per i grandi, 8 e 6 per i piccolissimi */
-  :where(.btn, .dd-btn, .dd-field, .tog-btn, .seg, .layout-switch, .sv-tabs, .crumbs .back, .gx-nav, .sample-box) {
-    --sq-f: var(--sqf12); --sq-ring: var(--sqr12); --sq-ringf: var(--sqb12);
+  :where(.btn, .dd-btn, .dd-field, .tog-btn, .seg, .layout-switch, .sv-tabs, .crumbs .back, .fold-btn, .gx-nav, .sample-box) {
+    --sq-f: var(--sqf12); --sq-ring: var(--sqr12); --sq-ringf: var(--sqb12); --sq-rr: 6.5px;
   }
   :where(.btn.sm, .copy-btn, .dd.sm .dd-btn, .seg button, .layout-switch button, .tab, .icon-btn) {
-    --sq-f: var(--sqf10); --sq-ring: var(--sqr10); --sq-ringf: var(--sqb10);
+    --sq-f: var(--sqf10); --sq-ring: var(--sqr10); --sq-ringf: var(--sqb10); --sq-rr: 5.4px;
   }
-  :where(.dz-btn, .landing-open, .dd.lg .dd-btn) { --sq-f: var(--sqf14); --sq-ring: var(--sqr14); --sq-ringf: var(--sqb14); }
+  :where(.dz-btn, .landing-open, .dd.lg .dd-btn) { --sq-f: var(--sqf14); --sq-ring: var(--sqr14); --sq-ringf: var(--sqb14); --sq-rr: 7.6px; }
   :where(.fcard .fc-step) { --sq-f: var(--sqf8); --sq-ring: var(--sqr8); --sq-ringf: var(--sqb8); }
   :where(.cm-sw) { --sq-f: var(--sqf6); --sq-ring: var(--sqr6); --sq-ringf: var(--sqb6); }
   /* senza bordo: il segno del fuoco sta sul filo del pulsante */
@@ -54,7 +68,8 @@
 
   /* il riquadro del testo di prova contiene l'elenco dei testi pronti, che una maschera taglierebbe: qui la forma piena e
      il bordo sono due strati sotto e sopra il contenuto, e il riquadro resta senza maschera */
-  .sample-box { position: relative; isolation: isolate; border-color: transparent; background: transparent; }
+  .sample-box { position: relative; isolation: isolate; border-color: transparent; background: transparent; transition: box-shadow .12s; }
+  .sample-box:is(:hover, :focus-within) { box-shadow: var(--btn-shadow); }   /* senza maschera: l'ombra si vede da sé */
   .sample-box:has(.dd.open) { z-index: 31; }
   .sample-box::before, .sample-box::after { content: ""; position: absolute; inset: -1px; pointer-events: none; }
   .sample-box::before { z-index: -1; background: var(--sheet); -webkit-mask-box-image: var(--sq-f); }

@@ -13,7 +13,7 @@
                 <span class="dd-suf" aria-hidden="true">@Suffix</span>
             }
             <button type="button" class="dd-tog" tabindex="-1" disabled="@Disabled" aria-label="Show choices" @onclick="Toggle">
-                <Icon Name="caret-down" Class="dd-caret" />
+                <Icon Name="chevron--down" Class="dd-caret" />
             </button>
         </div>
     }
@@ -22,8 +22,25 @@
         <button type="button" id="@uid" class="dd-btn" @ref="btn" disabled="@Disabled"
                 aria-haspopup="listbox" aria-expanded="@(open ? "true" : "false")"
                 aria-labelledby="@(LabelledBy is null ? null : $"{LabelledBy} {uid}")" @onclick="Toggle" @onkeydown="OnFieldKey">
-            <span class="dd-val">@CurrentLabel</span>
-            <Icon Name="caret-down" Class="dd-caret" />
+            @if (Steady)
+            {
+                @* tutte le scelte una sopra l'altra, visibile solo quella attuale: il pulsante prende la misura della più lunga *@
+                <span class="dd-val steady">
+                    @foreach (var o in Options)
+                    {
+                        <span class="@(o.Value == Value ? "on" : null)" aria-hidden="@(o.Value == Value ? null : "true")">@o.Label</span>
+                    }
+                    @if (!KnownValue)
+                    {
+                        <span class="on">@CurrentLabel</span>
+                    }
+                </span>
+            }
+            else
+            {
+                <span class="dd-val">@CurrentLabel</span>
+            }
+            <Icon Name="chevron--down" Class="dd-caret" />
         </button>
     }
     @if (open)
@@ -37,7 +54,7 @@
                 var o = Options[i];
                 <li id="@OptionId(i)" role="option" aria-selected="@(o.Value == Value ? "true" : "false")"
                     class="@OptionClass(i, o)" @onclick="() => Pick(k)" @onmouseenter="() => Hover(k)">
-                    <Icon Name="check" Class="dd-check" />
+                    <Icon Name="checkmark" Class="dd-check" />
                     <span>@o.Label</span>
                     @if (o.Note is not null)
                     {

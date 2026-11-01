@@ -45,6 +45,15 @@ public sealed class FontLoader(BrowserBridge bridge)
     }
 
     private readonly Dictionary<int, Job> _jobs = [];
+
+    /// <summary>
+    /// Leggendo un file si è scoperto che è un variabile con il corsivo dentro (asse slnt/ital): il catalogo deve rifare
+    /// le sue tendine (offrono "… Italic") e, con Italic acceso, può mostrarlo inclinato.
+    /// </summary>
+    public event Action? SlantFound;
+
+    /// <summary>Sono arrivati i dati di un file che prima non li aveva (nome, crediti…): la pagina della famiglia li confronta.</summary>
+    public event Action<FontStyle>? InfoRead;
     private int _active, _abandoned;
     private bool _timer;
     private long _order;
@@ -172,8 +181,9 @@ public sealed class FontLoader(BrowserBridge bridge)
         var st = job.Style;
         try
         {
-            // i byte passano al C# solo se mancano i dati del file (o se servono i testi lunghi dei crediti)
-            bool needInfo = st.Info is null || (job.Full && st.Info.Slim);
+            // i byte passano al C# solo se mancano i dati del file (o se servono i testi lunghi dei crediti, o gli assi
+            // di un font variabile analizzato prima che l'app li leggesse: servono all'animazione e al corsivo dei variabili)
+            bool needInfo = st.Info is null || (job.Full && st.Info.Slim) || (st.Info.IsVariable && FontInfo.NeedsAxes(st.Info) && !st.Info.Error && st.Info.Note is null);
             if (st.Status != LoadStatus.Ready)
             {
                 var face = "pf" + st.Id;
@@ -201,10 +211,13 @@ public sealed class FontLoader(BrowserBridge bridge)
         }
     }
 
-    private static void Parse(FontStyle st, byte[] bytes)
+    private void Parse(FontStyle st, byte[] bytes)
     {
         if (bytes.Length == 0) return;
+        bool had = st.SlantsToItalic, hadInfo = st.Info is not null;
         try { st.Info = OpenTypeReader.Read(bytes); } catch { /* restano i dati che avevamo */ }
+        if (!had && st.SlantsToItalic) SlantFound?.Invoke();
+        if (!hadInfo && st.Info is not null) InfoRead?.Invoke(st);
     }
 
     private void CheckIdle()

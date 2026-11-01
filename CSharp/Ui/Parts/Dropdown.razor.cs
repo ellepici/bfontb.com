@@ -35,6 +35,14 @@ public partial class Dropdown
 
     [Parameter] public bool Editable { get; set; }
 
+    /// <summary>
+    /// Larghezza fissa: il pulsante è largo quanto la scelta più lunga, qualunque sia quella scelta,
+    /// così cambiando valore (Regular → Extra Bold) non si allarga e non sposta i comandi accanto.
+    /// </summary>
+    [Parameter] public bool Steady { get; set; }
+
+    private bool KnownValue => Options.Any(o => o.Value == Value);
+
     /// <summary>Dal testo scritto al valore (già nei limiti); null se non vuol dire niente: si torna al valore di prima.</summary>
     [Parameter] public Func<string, string?>? Parse { get; set; }
 

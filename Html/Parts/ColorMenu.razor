@@ -1,47 +1,84 @@
-@* Colori dei testi di prova: coppie pronte, testo e sfondo (tavolozza o codice esadecimale), scambio e ritorno al tema *@
-<div class="@(open ? "dd cm open" : "dd cm")">
+@* Colore dei testi di prova, uno per volta: testo (Ink = true) o sfondo (barre HSL, tavolozza, recenti, codice HEX e RGB) *@
+<div class="@(open ? "dd cm open" : "dd cm")" @onkeydown="OnKey">
     <button type="button" class="dd-btn cm-btn" aria-haspopup="dialog" aria-expanded="@(open ? "true" : "false")"
-            aria-label="@($"Colors: {CurrentName}")" title="@($"Colors: {CurrentName}")" @onclick="Toggle">
-        <span class="cm-sw" style="@Swatch(Lib.InkColor, Lib.PaperColor)">Aa</span>
-        <Icon Name="caret-down" Class="dd-caret" />
+            aria-label="@($"{Label} color: {Current ?? "theme"}")" title="@($"{Label} color: {Current ?? "theme"}")" @onclick="Toggle">
+        @* l'icona di Carbon con dentro il colore scelto: la barra sotto la A per il testo, quella sotto il secchiello per lo sfondo *@
+        @if (Ink)
+        {
+            <svg class="ph cm-ico" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false">@((MarkupString)Icons.Body("text--color"))@if (Current is { } ink) { <path class="cm-chip" d="M6 24H26V28H6z" style="@($"fill:{ink}")" /> }</svg>
+        }
+        else
+        {
+            <svg class="ph cm-ico" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true" focusable="false">@((MarkupString)Icons.Body("text--fill"))@if (Current is { } paper) { <path class="cm-chip" d="M4 26H28V30H4z" style="@($"fill:{paper}")" /> }</svg>
+        }
+        <Icon Name="chevron--down" Class="dd-caret" />
     </button>
     @if (open)
     {
         <div class="dd-back" @onclick="Close"></div>
-        <div class="cm-pop" role="dialog" aria-label="Sample colors" @onkeydown="OnKey">
-            <div class="cm-presets">
-                @foreach (var p in Presets)
+        <div class="cm-pop" role="dialog" aria-label="@($"{Label} color")">
+            <span class="cm-lab">@Label</span>
+            @* tre schede una sotto l'altra: il codice (HEX e R, G, B), le barre HSL, i colori pronti (quadrati) *@
+            @* il codice: esadecimale (il # è già davanti, uno scritto a mano si toglie da solo: vedi bfontb.js) e i tre canali RGB,
+               ognuno con il nome sotto; senza un colore scelto si legge, in grigio, quello del tema *@
+            <div class="@(Current is null ? "cm-card cm-code is-auto" : "cm-card cm-code")">
+                @* il contagocce, accanto al codice: un colore preso da qualunque punto dello schermo, anche fuori dal browser.
+                   Dove c'è EyeDropper (Chrome, Edge) si apre quello. Safari non lo ha e non lascia a una pagina prendere colori fuori
+                   dalla finestra: sopra l'icona c'è un vero campo colore trasparente, che apre i colori di macOS ("Mostra colori…",
+                   con la lente di sistema). Il clic deve essere quello della persona, per questo è un campo e non un pulsante *@
+                <label class="cm-eye" title="Pick a color from the screen">
+                    <Icon Name="eyedropper" />
+                    <input type="color" class="cm-eye-in" aria-label="@($"{Label}: pick a color from the screen")" />
+                </label>
+                <label class="cm-f cm-f-hex">
+                    <span class="cm-field"><span class="cm-hash" aria-hidden="true">#</span><input class="cm-hex" aria-label="@($"{Label} color, hexadecimal")"
+                           spellcheck="false" autocomplete="off" maxlength="7" value="@HexValue" @onchange="OnCode" /></span>
+                    <span class="cm-f-l">Hex</span>
+                </label>
+                @for (var i = 0; i < 3; i++)
                 {
-                    <button type="button" class="@(IsCurrent(p) ? "cm-preset on" : "cm-preset")" @onclick="() => Use(p.Ink, p.Paper)">
-                        <span class="cm-sw" style="@Swatch(p.Ink, p.Paper)">Aa</span><span>@p.Name</span>
-                    </button>
+                    var ch = i;
+                    <label class="cm-f">
+                        <span class="cm-field"><input class="cm-ch" inputmode="numeric" maxlength="3" spellcheck="false" autocomplete="off"
+                               aria-label="@($"{Label} color, {ChannelNames[ch]} (0 to 255)")" value="@Channel(ch)" @onchange="e => OnChannel(ch, e)" /></span>
+                        <span class="cm-f-l">@ChannelNames[ch][..1].ToUpperInvariant()</span>
+                    </label>
                 }
             </div>
-            @foreach (var (label, isInk) in new[] { ("Text", true), ("Background", false) })
-            {
-                var current = isInk ? Lib.InkColor : Lib.PaperColor;
-                <div class="cm-row">
-                    <span class="cm-lab">@label</span>
-                    <span class="cm-cur" style="@($"background:{current ?? (isInk ? "var(--ink)" : "var(--sheet)")}")"></span>
-                    <input class="cm-hex" aria-label="@($"{label} color, hexadecimal")" spellcheck="false" autocomplete="off" maxlength="7"
-                           placeholder="auto" value="@current" @onchange="e => OnHex(isInk, e)" />
-                </div>
-                <div class="cm-pal" role="group" aria-label="@($"{label} colors")">
+            @* le barre: tinta, saturazione, luminosità, ognuna con il suo valore da scrivere a mano; il pomello è pieno del colore che si ottiene *@
+            <div class="cm-card cw" @ref="wheelEl">
+                <div class="cw-row"><span class="cw-k">H</span><div class="cw-bar" data-k="h" tabindex="0" role="slider" aria-label="@($"{Label}: hue")" aria-valuemin="0" aria-valuemax="360"><span class="cw-knob"></span></div><input class="cw-val" data-k="h" inputmode="numeric" maxlength="3" autocomplete="off" aria-label="@($"{Label}: hue, 0 to 360")" /></div>
+                <div class="cw-row"><span class="cw-k">S</span><div class="cw-bar" data-k="s" tabindex="0" role="slider" aria-label="@($"{Label}: saturation")" aria-valuemin="0" aria-valuemax="100"><span class="cw-knob"></span></div><input class="cw-val" data-k="s" inputmode="numeric" maxlength="3" autocomplete="off" aria-label="@($"{Label}: saturation, 0 to 100")" /></div>
+                <div class="cw-row"><span class="cw-k">L</span><div class="cw-bar" data-k="l" tabindex="0" role="slider" aria-label="@($"{Label}: lightness")" aria-valuemin="0" aria-valuemax="100"><span class="cw-knob"></span></div><input class="cw-val" data-k="l" inputmode="numeric" maxlength="3" autocomplete="off" aria-label="@($"{Label}: lightness, 0 to 100")" /></div>
+            </div>
+            <div class="cm-card">
+                <div class="cm-pal" role="group" aria-label="@($"{Label} colors")">
                     @foreach (var c in Palette)
                     {
-                        <button type="button" class="@(string.Equals(c, current, StringComparison.OrdinalIgnoreCase) ? "cm-c on" : "cm-c")"
-                                style="@($"background:{c}")" title="@c" aria-label="@c" @onclick="() => Pick(isInk, c)"></button>
+                        <button type="button" class="@(string.Equals(c, Current, StringComparison.OrdinalIgnoreCase) ? "cm-c on" : "cm-c")"
+                                style="@($"background:{c}")" title="@c" aria-label="@c" @onclick="() => PickReady(c)"></button>
                     }
+                    @* in fondo la casella del colore del tema (nessuna scelta) *@
+                    <button type="button" class="@(Current is null ? "cm-c cm-auto on" : "cm-c cm-auto")" title="Theme color (auto)"
+                            aria-label="@($"{Label}: theme color")" @onclick="() => PickReady(null)"></button>
                 </div>
-            }
-            <div class="cm-foot">
-                <button type="button" class="btn ghost sm" @onclick="Swap"><Icon Name="arrows-down-up" /> Swap</button>
-                <button type="button" class="btn ghost sm" disabled="@(Lib.InkColor is null && Lib.PaperColor is null)" @onclick="() => Use(null, null)"><Icon Name="arrow-counter-clockwise" /> Reset</button>
-                @if (LowContrast is { } ratio)
+                @if (Lib.RecentColors.Count > 0)
                 {
-                    <span class="cm-warn" title="@($"Contrast {ratio:0.0}:1 (at least 4.5:1 reads well)")"><Icon Name="warning-circle" /> Low contrast</span>
+                    @* gli ultimi colori personalizzati (fuori dalla tavolozza), salvati appena scelti; quello in uso è cerchiato *@
+                    <div class="cm-rec-l">Recent</div>
+                    <div class="cm-pal cm-rec" role="group" aria-label="Recent colors">
+                        @foreach (var c in Lib.RecentColors)
+                        {
+                            <button type="button" class="@(string.Equals(c, Current, StringComparison.OrdinalIgnoreCase) ? "cm-c on" : "cm-c")"
+                                    style="@($"background:{c}")" title="@c" aria-label="@c" @onclick="() => PickReady(c)"></button>
+                        }
+                    </div>
                 }
             </div>
+            @if (LowContrast is { } ratio)
+            {
+                <span class="cm-warn" title="@($"Contrast {ratio:0.0}:1 (at least 4.5:1 reads well)")"><Icon Name="warning" /> Low contrast with the @(Ink ? "background" : "text")</span>
+            }
         </div>
     }
 </div>

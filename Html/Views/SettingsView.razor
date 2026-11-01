@@ -32,7 +32,7 @@
             </div>
             @* il pulsante sta fermo nell'angolo del riquadro; nel testo un piccolo spazio vuoto a destra gli fa posto *@
             <div class="prompt-box">
-                <button class="btn ghost copy-btn" @onclick="CopyPrompt"><Icon Name="@(copied ? "check" : "copy")" /> @(copied ? "Copied" : "Copy prompt")</button>
+                <button class="btn ghost copy-btn" @onclick="CopyPrompt"><Icon Name="@(copied ? "checkmark" : "copy")" /> @(copied ? "Copied" : "Copy prompt")</button>
 <pre class="prompt"><span class="prompt-gap" aria-hidden="true"></span>@Prompt</pre>
             </div>
         </div>
